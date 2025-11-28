@@ -1,183 +1,485 @@
 import React, { useState, useEffect } from 'react';
 
-const CONFIG = {
-  positions: [
-    { platform: 'Vest (Forex)', size: 7000, leverage: 15, type: 'funding', apr: 5 },
-    { platform: 'Hyperliquid', size: 5000, leverage: 1, type: 'funding', apr: 12 },
-    { platform: 'Polymarket', size: 3000, leverage: 1, type: 'prediction', apr: 0 },
-    { platform: 'Stocks', size: 10000, leverage: 1, type: 'spot', apr: 0 },
-    { platform: 'Livret A', size: 5000, leverage: 1, type: 'savings', apr: 3 },
-  ],
-  watchlists: {
-    uranium: { symbols: ['CCJ', 'URA', 'URNM', 'NXE', 'DNN'], thesis: 'Déficit offre/demande structurel' },
-    japan: { symbols: ['EWJ', 'DXJ', 'MUFG'], thesis: 'Fin déflation, yen faible' },
-    semiconductors: { symbols: ['NVDA', 'ASML', 'TSM', 'AMD', 'LRCX'], thesis: 'IA, data centers' },
-    defense: { symbols: ['LMT', 'RTX', 'PLTR', 'AVAV'], thesis: 'Réarmement global' },
-    space: { symbols: ['RKLB', 'PL', 'LUNR'], thesis: 'NewSpace, satellites' },
-    robotics: { symbols: ['ISRG', 'TER', 'FANUY'], thesis: 'Automation' },
-    copper: { symbols: ['FCX', 'SCCO', 'COPX'], thesis: 'Électrification, EVs' },
-    energy_infra: { symbols: ['PWR', 'ETN'], thesis: 'Grid + data centers' },
-  },
-  riskRules: { maxPerPlatform: 30, minPlatforms: 4, maxLeverage: 20, stopLoss: 10 }
-};
-
+// ==================== ICONS ====================
 const Icons = {
   Zap: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>,
+  Plus: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>,
+  Trash: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>,
+  ExternalLink: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
   TrendingUp: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>,
-  TrendingDown: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6" /></svg>,
-  Shield: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
-  Target: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeWidth={2}/><circle cx="12" cy="12" r="6" strokeWidth={2}/><circle cx="12" cy="12" r="2" strokeWidth={2}/></svg>,
-  PieChart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg>,
-  AlertTriangle: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>,
-  Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
-  Refresh: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
   DollarSign: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  Percent: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>,
+  Target: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeWidth={2}/><circle cx="12" cy="12" r="6" strokeWidth={2}/><circle cx="12" cy="12" r="2" strokeWidth={2}/></svg>,
+  BarChart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+  Save: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>,
 };
 
-const Card = ({ children, className = '', alert = false }) => (
-  <div className={`bg-gray-900 border rounded-xl p-4 ${alert ? 'border-yellow-600' : 'border-gray-800'} ${className}`}>{children}</div>
-);
+// ==================== FUNDING PLATFORMS ====================
+const FUNDING_PLATFORMS = [
+  { name: 'Hyperliquid', url: 'https://app.hyperliquid.xyz/trade', color: 'text-green-400' },
+  { name: 'Vest', url: 'https://alpha.vestmarkets.com/', color: 'text-purple-400' },
+  { name: 'Paradex', url: 'https://www.paradex.trade/', color: 'text-pink-400' },
+  { name: 'Extended', url: 'https://extended.exchange/', color: 'text-blue-400' },
+  { name: 'Lighter', url: 'https://lighter.xyz/', color: 'text-cyan-400' },
+  { name: 'XYZ', url: 'https://trade.xyz/', color: 'text-yellow-400' },
+];
 
-const Badge = ({ children, variant = 'default' }) => {
-  const styles = { default: 'bg-gray-800 text-gray-300', success: 'bg-green-900/50 text-green-400 border border-green-800', danger: 'bg-red-900/50 text-red-400 border border-red-800', warning: 'bg-yellow-900/50 text-yellow-400 border border-yellow-800', info: 'bg-blue-900/50 text-blue-400 border border-blue-800' };
-  return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[variant]}`}>{children}</span>;
-};
+// ==================== PREDICTION SITES ====================
+const PREDICTION_SITES = [
+  { name: 'Polymarket', url: 'https://polymarket.com/', desc: 'Le plus gros, liquidité max' },
+  { name: 'Myriad', url: 'https://myriad.markets/earn', desc: 'Earn + airdrops potentiel' },
+  { name: 'Myriad BNB', url: 'https://bnb.myriadprotocol.com/markets', desc: 'Version BNB Chain' },
+  { name: 'Limitless', url: 'https://limitless.exchange/advanced', desc: 'Advanced trading' },
+  { name: 'PredictBase', url: 'https://predictbase.app/', desc: 'Nouveau, à explorer' },
+  { name: 'Opinion Trade', url: 'https://app.opinion.trade/profile', desc: 'Opinion markets' },
+  { name: 'XO Market', url: 'https://beta.xo.market/markets?sort=volume-high-to-low', desc: 'Beta, volume sorted' },
+];
 
-const Change = ({ value }) => {
-  const isPos = value >= 0;
-  return <span className={`flex items-center gap-1 text-sm ${isPos ? 'text-green-400' : 'text-red-400'}`}>{isPos ? <Icons.TrendingUp /> : <Icons.TrendingDown />}{isPos ? '+' : ''}{value.toFixed(2)}%</span>;
-};
-
-const ProgressBar = ({ value, max = 100, color = 'blue' }) => {
-  const pct = Math.min(100, (value / max) * 100);
-  const colors = { blue: 'bg-blue-500', green: 'bg-green-500', yellow: 'bg-yellow-500', red: 'bg-red-500' };
-  return <div className="h-2 bg-gray-800 rounded-full overflow-hidden"><div className={`h-full ${colors[color]} rounded-full`} style={{ width: `${pct}%` }} /></div>;
-};
-
+// ==================== MAIN APP ====================
 export default function App() {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [positions] = useState(CONFIG.positions);
-  const [stockPrices, setStockPrices] = useState({});
-  const [predictions, setPredictions] = useState([]);
-  const [fundingRates, setFundingRates] = useState({});
-  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [activeTab, setActiveTab] = useState('funding');
+  
+  // ===== FUNDING STATE =====
+  const [fundingPositions, setFundingPositions] = useState(() => {
+    const saved = localStorage.getItem('fundingPositions');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, pair: 'EUR/USD', platform: 'Vest', capital: 7000, leverage: 15, apr: 5 },
+      { id: 2, pair: 'BTC', platform: 'Hyperliquid', capital: 3000, leverage: 5, apr: 12 },
+    ];
+  });
+  const [newPosition, setNewPosition] = useState({ pair: '', platform: 'Hyperliquid', capital: '', leverage: '', apr: '' });
 
-  const totalCapital = positions.reduce((a, b) => a + b.size, 0);
-  const byPlatform = positions.reduce((acc, p) => { acc[p.platform] = (acc[p.platform] || 0) + p.size; return acc; }, {});
-  const platformPcts = Object.entries(byPlatform).map(([name, size]) => ({ name, size, pct: (size / totalCapital * 100).toFixed(1) }));
-  const yearlyYield = positions.reduce((acc, p) => p.type === 'funding' ? acc + (p.size * p.leverage * p.apr / 100) : acc + (p.size * p.apr / 100), 0);
+  // ===== STOCKS STATE =====
+  const [stockGroups, setStockGroups] = useState(() => {
+    const saved = localStorage.getItem('stockGroups');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, name: 'Uranium', symbols: ['CCJ', 'URA', 'URNM', 'NXE'] },
+      { id: 2, name: 'Semiconductors', symbols: ['NVDA', 'ASML', 'TSM', 'AMD'] },
+      { id: 3, name: 'Japan', symbols: ['EWJ', 'DXJ', 'MUFG'] },
+      { id: 4, name: 'Defense', symbols: ['LMT', 'RTX', 'PLTR'] },
+    ];
+  });
+  const [newGroup, setNewGroup] = useState({ name: '', symbols: '' });
+  const [selectedStock, setSelectedStock] = useState('CCJ');
 
-  const alerts = [];
-  platformPcts.forEach(p => { if (parseFloat(p.pct) > CONFIG.riskRules.maxPerPlatform) alerts.push(`⚠️ ${p.name}: ${p.pct}% (max: ${CONFIG.riskRules.maxPerPlatform}%)`); });
-  if (platformPcts.length < CONFIG.riskRules.minPlatforms) alerts.push(`⚠️ ${platformPcts.length} plateformes (min: ${CONFIG.riskRules.minPlatforms})`);
-  const riskScore = Math.min(100, Math.max(...platformPcts.map(p => parseFloat(p.pct))) * 1.5);
+  // ===== SAVE TO LOCALSTORAGE =====
+  useEffect(() => {
+    localStorage.setItem('fundingPositions', JSON.stringify(fundingPositions));
+  }, [fundingPositions]);
 
   useEffect(() => {
-    setFundingRates({ 'BTC': { hyperliquid: 12.5, binance: 10.2, bybit: 11.8 }, 'ETH': { hyperliquid: 8.3, binance: 7.1, bybit: 9.2 }, 'SOL': { hyperliquid: 15.2, binance: 12.8, bybit: 14.1 }, 'EUR/USD': { vest: 5.0 }, 'GBP/USD': { vest: 5.7 } });
-    setPredictions([
-      { question: 'Will Bitcoin reach $100k in 2025?', yes: 0.72, volume: 2500000 },
-      { question: 'Will Fed cut rates in Q1 2025?', yes: 0.88, volume: 1800000 },
-      { question: 'Will ETH ETF be approved?', yes: 0.91, volume: 890000 },
-      { question: 'Will oil hit $100/barrel?', yes: 0.35, volume: 450000 },
-    ]);
-    const mockPrices = {};
-    Object.entries(CONFIG.watchlists).forEach(([sector, data]) => {
-      mockPrices[sector] = data.symbols.map(s => ({ symbol: s, price: (Math.random() * 200 + 20).toFixed(2), change: (Math.random() * 10 - 5).toFixed(2) }));
-    });
-    setStockPrices(mockPrices);
-  }, []);
+    localStorage.setItem('stockGroups', JSON.stringify(stockGroups));
+  }, [stockGroups]);
 
-  const arbitrageOpps = Object.entries(fundingRates).filter(([_, rates]) => Object.keys(rates).length > 1).map(([symbol, rates]) => {
-    const sorted = Object.entries(rates).sort((a, b) => a[1] - b[1]);
-    return { symbol, spread: (sorted[sorted.length - 1][1] - sorted[0][1]).toFixed(1), long: sorted[0][0], short: sorted[sorted.length - 1][0], longRate: sorted[0][1], shortRate: sorted[sorted.length - 1][1] };
-  }).filter(o => parseFloat(o.spread) > 2).sort((a, b) => parseFloat(b.spread) - parseFloat(a.spread));
+  // ===== FUNDING CALCULATIONS =====
+  const totalCapital = fundingPositions.reduce((a, b) => a + Number(b.capital), 0);
+  const totalNotional = fundingPositions.reduce((a, b) => a + (Number(b.capital) * Number(b.leverage)), 0);
+  const yearlyYield = fundingPositions.reduce((a, b) => {
+    const notional = Number(b.capital) * Number(b.leverage);
+    return a + (notional * Number(b.apr) / 100);
+  }, 0);
+  const dailyYield = yearlyYield / 365;
+  const monthlyYield = yearlyYield / 12;
 
-  const highProbPredictions = predictions.filter(p => Math.max(p.yes, 1 - p.yes) >= 0.85);
+  // ===== HANDLERS =====
+  const addFundingPosition = () => {
+    if (!newPosition.pair || !newPosition.capital) return;
+    setFundingPositions([...fundingPositions, {
+      id: Date.now(),
+      ...newPosition,
+      capital: Number(newPosition.capital),
+      leverage: Number(newPosition.leverage) || 1,
+      apr: Number(newPosition.apr) || 0,
+    }]);
+    setNewPosition({ pair: '', platform: 'Hyperliquid', capital: '', leverage: '', apr: '' });
+  };
+
+  const deleteFundingPosition = (id) => {
+    setFundingPositions(fundingPositions.filter(p => p.id !== id));
+  };
+
+  const addStockGroup = () => {
+    if (!newGroup.name || !newGroup.symbols) return;
+    setStockGroups([...stockGroups, {
+      id: Date.now(),
+      name: newGroup.name,
+      symbols: newGroup.symbols.split(',').map(s => s.trim().toUpperCase()),
+    }]);
+    setNewGroup({ name: '', symbols: '' });
+  };
+
+  const deleteStockGroup = (id) => {
+    setStockGroups(stockGroups.filter(g => g.id !== id));
+  };
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: Icons.PieChart },
-    { id: 'funding', label: 'Funding', icon: Icons.Percent },
+    { id: 'funding', label: 'Funding', icon: Icons.Zap },
     { id: 'predictions', label: 'Predictions', icon: Icons.Target },
-    { id: 'stocks', label: 'Stocks', icon: Icons.DollarSign },
-    { id: 'risk', label: 'Risk', icon: Icons.Shield },
+    { id: 'stocks', label: 'Stocks', icon: Icons.BarChart },
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white p-4">
-      <header className="mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2"><span className="text-yellow-400"><Icons.Zap /></span>Trading Dashboard</h1>
-          <div className="flex items-center gap-3 text-sm text-gray-500">
-            <span>Màj: {lastUpdate.toLocaleTimeString()}</span>
-            <button onClick={() => setLastUpdate(new Date())} className="p-2 bg-gray-800 rounded-lg hover:bg-gray-700"><Icons.Refresh /></button>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="border-b border-gray-800 bg-gray-950 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <div className="flex justify-between items-center mb-3">
+            <h1 className="text-xl font-bold flex items-center gap-2">
+              <span className="text-yellow-400"><Icons.Zap /></span>
+              Trading Dashboard
+            </h1>
           </div>
+          <nav className="flex gap-2">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
+                  activeTab === tab.id ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'
+                }`}
+              >
+                <tab.icon />{tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
-        <nav className="flex gap-2 overflow-x-auto pb-2">
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm whitespace-nowrap ${activeTab === tab.id ? 'bg-blue-600' : 'bg-gray-800 hover:bg-gray-700'}`}>
-              <tab.icon />{tab.label}
-            </button>
-          ))}
-        </nav>
       </header>
 
-      <main className="space-y-4">
-        {activeTab === 'overview' && (
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card><div className="text-gray-500 text-xs uppercase">Capital Total</div><div className="text-2xl font-bold">${totalCapital.toLocaleString()}</div></Card>
-              <Card><div className="text-gray-500 text-xs uppercase">Yield Annuel Est.</div><div className="text-2xl font-bold text-green-400">${yearlyYield.toFixed(0)}</div><div className="text-xs text-gray-500">{(yearlyYield / totalCapital * 100).toFixed(1)}% APR</div></Card>
-              <Card><div className="text-gray-500 text-xs uppercase">Opportunités</div><div className="text-2xl font-bold">{arbitrageOpps.length}</div><div className="text-xs text-gray-500">arbitrage funding</div></Card>
-              <Card><div className="text-gray-500 text-xs uppercase">Risk Score</div><div className="text-2xl font-bold">{riskScore.toFixed(0)}/100</div><ProgressBar value={riskScore} color={riskScore < 40 ? 'green' : riskScore < 70 ? 'yellow' : 'red'} /></Card>
-            </div>
-            {alerts.length > 0 && <Card alert><div className="flex items-center gap-2 text-yellow-400 mb-2"><Icons.AlertTriangle /><span className="font-semibold">Alertes</span></div>{alerts.map((a, i) => <div key={i} className="text-sm text-gray-300">{a}</div>)}</Card>}
-            <div className="grid lg:grid-cols-2 gap-4">
-              <Card><h3 className="font-semibold mb-3 flex items-center gap-2 text-yellow-400"><Icons.Zap />Top Arbitrage</h3>{arbitrageOpps.slice(0, 3).map((o, i) => <div key={i} className="flex justify-between items-center p-2 bg-gray-800/50 rounded mb-2"><div><span className="font-mono font-bold">{o.symbol}</span><div className="text-xs text-gray-500">Long {o.long} → Short {o.short}</div></div><Badge variant="success">{o.spread}%</Badge></div>)}</Card>
-              <Card><h3 className="font-semibold mb-3 flex items-center gap-2 text-green-400"><Icons.Target />Bets High Prob</h3>{highProbPredictions.slice(0, 3).map((p, i) => <div key={i} className="flex justify-between items-center p-2 bg-gray-800/50 rounded mb-2"><span className="text-sm truncate flex-1 pr-2">{p.question.slice(0, 35)}...</span><Badge variant="success">{(Math.max(p.yes, 1 - p.yes) * 100).toFixed(0)}%</Badge></div>)}</Card>
-            </div>
-            <Card><h3 className="font-semibold mb-3 flex items-center gap-2"><Icons.PieChart />Allocation</h3><div className="space-y-2">{platformPcts.map((p, i) => <div key={i}><div className="flex justify-between text-sm mb-1"><span>{p.name}</span><span>${p.size.toLocaleString()} ({p.pct}%)</span></div><ProgressBar value={parseFloat(p.pct)} color={parseFloat(p.pct) > 30 ? 'red' : parseFloat(p.pct) > 20 ? 'yellow' : 'blue'} /></div>)}</div></Card>
-          </>
-        )}
+      <main className="max-w-7xl mx-auto px-4 py-6">
 
+        {/* ==================== FUNDING TAB ==================== */}
         {activeTab === 'funding' && (
-          <>
-            <Card alert={arbitrageOpps.length > 0}><h3 className="font-semibold mb-3 flex items-center gap-2 text-yellow-400"><Icons.Zap />Opportunités d'Arbitrage</h3>{arbitrageOpps.map((o, i) => <div key={i} className="p-3 bg-gray-800/50 rounded-lg mb-2"><div className="flex justify-between items-center"><span className="font-mono font-bold text-lg">{o.symbol}</span><Badge variant="success">{o.spread}% spread</Badge></div><div className="text-sm text-gray-400 mt-1">Long sur <span className="text-green-400">{o.long}</span> ({o.longRate}%) → Short sur <span className="text-red-400">{o.short}</span> ({o.shortRate}%)</div></div>)}</Card>
-            <Card><h3 className="font-semibold mb-3">Tous les Funding Rates (APR)</h3><table className="w-full text-sm"><thead><tr className="text-gray-500 border-b border-gray-800"><th className="text-left pb-2">Symbol</th><th className="text-right pb-2">Hyperliquid</th><th className="text-right pb-2">Binance</th><th className="text-right pb-2">Bybit</th><th className="text-right pb-2">Vest</th></tr></thead><tbody>{Object.entries(fundingRates).map(([symbol, rates]) => <tr key={symbol} className="border-b border-gray-800/50"><td className="py-2 font-mono font-bold">{symbol}</td><td className={`py-2 text-right ${rates.hyperliquid ? 'text-green-400' : 'text-gray-600'}`}>{rates.hyperliquid ? `${rates.hyperliquid}%` : '-'}</td><td className={`py-2 text-right ${rates.binance ? 'text-green-400' : 'text-gray-600'}`}>{rates.binance ? `${rates.binance}%` : '-'}</td><td className={`py-2 text-right ${rates.bybit ? 'text-green-400' : 'text-gray-600'}`}>{rates.bybit ? `${rates.bybit}%` : '-'}</td><td className={`py-2 text-right ${rates.vest ? 'text-green-400' : 'text-gray-600'}`}>{rates.vest ? `${rates.vest}%` : '-'}</td></tr>)}</tbody></table></Card>
-            <Card><h3 className="font-semibold mb-3">💰 Calculateur de Rendement</h3><div className="grid grid-cols-3 gap-4"><div className="p-3 bg-gray-800/50 rounded"><div className="text-gray-400 text-xs">Position 100k$ @ 5% APR</div><div className="text-xl font-bold text-green-400">$13.70/jour</div></div><div className="p-3 bg-gray-800/50 rounded"><div className="text-gray-400 text-xs">Position 100k$ @ 10% APR</div><div className="text-xl font-bold text-green-400">$27.40/jour</div></div><div className="p-3 bg-gray-800/50 rounded"><div className="text-gray-400 text-xs">Position 100k$ @ 15% APR</div><div className="text-xl font-bold text-green-400">$41.10/jour</div></div></div></Card>
-          </>
+          <div className="grid lg:grid-cols-3 gap-6">
+            
+            {/* Left: Positions */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="text-gray-500 text-xs uppercase">Capital</div>
+                  <div className="text-2xl font-bold">${totalCapital.toLocaleString()}</div>
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="text-gray-500 text-xs uppercase">Notionnel</div>
+                  <div className="text-2xl font-bold">${totalNotional.toLocaleString()}</div>
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="text-gray-500 text-xs uppercase">Yield/Jour</div>
+                  <div className="text-2xl font-bold text-green-400">${dailyYield.toFixed(2)}</div>
+                </div>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="text-gray-500 text-xs uppercase">Yield/An</div>
+                  <div className="text-2xl font-bold text-green-400">${yearlyYield.toFixed(0)}</div>
+                  <div className="text-xs text-gray-500">{((yearlyYield / totalCapital) * 100).toFixed(1)}% ROI</div>
+                </div>
+              </div>
+
+              {/* Add Position Form */}
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Icons.Plus />
+                  Ajouter une position
+                </h3>
+                <div className="grid grid-cols-2 lg:grid-cols-6 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Pair (BTC, EUR/USD...)"
+                    value={newPosition.pair}
+                    onChange={e => setNewPosition({...newPosition, pair: e.target.value})}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <select
+                    value={newPosition.platform}
+                    onChange={e => setNewPosition({...newPosition, platform: e.target.value})}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  >
+                    {FUNDING_PLATFORMS.map(p => (
+                      <option key={p.name} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    placeholder="Capital $"
+                    value={newPosition.capital}
+                    onChange={e => setNewPosition({...newPosition, capital: e.target.value})}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Leverage"
+                    value={newPosition.leverage}
+                    onChange={e => setNewPosition({...newPosition, leverage: e.target.value})}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    placeholder="APR %"
+                    value={newPosition.apr}
+                    onChange={e => setNewPosition({...newPosition, apr: e.target.value})}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    onClick={addFundingPosition}
+                    className="bg-blue-600 hover:bg-blue-700 rounded-lg px-4 py-2 text-sm font-medium"
+                  >
+                    Ajouter
+                  </button>
+                </div>
+              </div>
+
+              {/* Positions Table */}
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3">Mes Positions</h3>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-500 border-b border-gray-800">
+                      <th className="text-left pb-2">Pair</th>
+                      <th className="text-left pb-2">Platform</th>
+                      <th className="text-right pb-2">Capital</th>
+                      <th className="text-right pb-2">Leverage</th>
+                      <th className="text-right pb-2">Notionnel</th>
+                      <th className="text-right pb-2">APR</th>
+                      <th className="text-right pb-2">Yield/Jour</th>
+                      <th className="text-right pb-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fundingPositions.map(pos => {
+                      const notional = pos.capital * pos.leverage;
+                      const daily = (notional * pos.apr / 100) / 365;
+                      const platform = FUNDING_PLATFORMS.find(p => p.name === pos.platform);
+                      return (
+                        <tr key={pos.id} className="border-b border-gray-800/50">
+                          <td className="py-2 font-mono font-bold">{pos.pair}</td>
+                          <td className={`py-2 ${platform?.color || ''}`}>{pos.platform}</td>
+                          <td className="py-2 text-right">${pos.capital.toLocaleString()}</td>
+                          <td className="py-2 text-right">x{pos.leverage}</td>
+                          <td className="py-2 text-right">${notional.toLocaleString()}</td>
+                          <td className="py-2 text-right text-green-400">{pos.apr}%</td>
+                          <td className="py-2 text-right text-green-400">${daily.toFixed(2)}</td>
+                          <td className="py-2 text-right">
+                            <button onClick={() => deleteFundingPosition(pos.id)} className="text-red-400 hover:text-red-300">
+                              <Icons.Trash />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Right: Platforms Links */}
+            <div className="space-y-4">
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3">Plateformes Funding</h3>
+                <div className="space-y-2">
+                  {FUNDING_PLATFORMS.map(platform => (
+                    <a
+                      key={platform.name}
+                      href={platform.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      <span className={`font-medium ${platform.color}`}>{platform.name}</span>
+                      <Icons.ExternalLink />
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3">📊 FundingView</h3>
+                <a
+                  href="https://www.fundingview.io/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between p-3 bg-gradient-to-r from-pink-900/50 to-purple-900/50 rounded-lg hover:from-pink-900 hover:to-purple-900 transition-colors"
+                >
+                  <span className="font-medium">Ouvrir FundingView</span>
+                  <Icons.ExternalLink />
+                </a>
+                <p className="text-xs text-gray-500 mt-2">Compare les fundings entre toutes les plateformes</p>
+              </div>
+
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3">💰 Résumé</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Positions</span>
+                    <span>{fundingPositions.length}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Yield mensuel</span>
+                    <span className="text-green-400">${monthlyYield.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">ROI sur capital</span>
+                    <span className="text-green-400">{((yearlyYield / totalCapital) * 100).toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
+        {/* ==================== PREDICTIONS TAB ==================== */}
         {activeTab === 'predictions' && (
-          <>
-            <Card><h3 className="font-semibold mb-3 flex items-center gap-2 text-green-400"><Icons.Target />Bets Haute Probabilité (≥85%)</h3>{highProbPredictions.map((p, i) => { const prob = Math.max(p.yes, 1 - p.yes); const side = p.yes > 0.5 ? 'YES' : 'NO'; return <div key={i} className="p-3 bg-gray-800/50 rounded-lg mb-2"><div className="flex justify-between items-start"><p className="flex-1 pr-4">{p.question}</p><Badge variant="success">{side} @ {(prob * 100).toFixed(0)}%</Badge></div><div className="flex gap-4 mt-2 text-sm text-gray-400"><span>Return: {((1 / prob - 1) * 100).toFixed(1)}%</span><span>Vol: ${(p.volume / 1000000).toFixed(1)}M</span></div></div>; })}</Card>
-            <Card><h3 className="font-semibold mb-3">Tous les marchés</h3>{predictions.map((p, i) => <div key={i} className="flex justify-between items-center p-2 bg-gray-800/30 rounded mb-2"><span className="flex-1 truncate pr-4 text-sm">{p.question}</span><div className="flex gap-2"><span className="text-green-400 font-mono text-sm">Y:{(p.yes * 100).toFixed(0)}%</span><span className="text-red-400 font-mono text-sm">N:{((1 - p.yes) * 100).toFixed(0)}%</span></div></div>)}</Card>
-          </>
+          <div className="space-y-4">
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Icons.Target />
+                Prediction Markets
+              </h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {PREDICTION_SITES.map(site => (
+                  <a
+                    key={site.name}
+                    href={site.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-4 bg-gray-800/50 rounded-lg hover:bg-gray-800 transition-colors border border-gray-700 hover:border-gray-600"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-semibold text-lg">{site.name}</span>
+                      <Icons.ExternalLink />
+                    </div>
+                    <p className="text-sm text-gray-400">{site.desc}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+              <h3 className="font-semibold mb-3">💡 Stratégies</h3>
+              <div className="grid md:grid-cols-2 gap-4 text-sm">
+                <div className="p-3 bg-gray-800/50 rounded-lg">
+                  <div className="font-medium text-green-400 mb-1">Bets Haute Probabilité</div>
+                  <p className="text-gray-400">Cherche les marchés à 85%+ de probabilité pour du rendement quasi-sûr</p>
+                </div>
+                <div className="p-3 bg-gray-800/50 rounded-lg">
+                  <div className="font-medium text-yellow-400 mb-1">Farming Airdrops</div>
+                  <p className="text-gray-400">Volume sur Myriad et nouveaux sites pour potentiels airdrops</p>
+                </div>
+                <div className="p-3 bg-gray-800/50 rounded-lg">
+                  <div className="font-medium text-blue-400 mb-1">Arbitrage</div>
+                  <p className="text-gray-400">Compare les prix entre Polymarket et autres pour des opportunités</p>
+                </div>
+                <div className="p-3 bg-gray-800/50 rounded-lg">
+                  <div className="font-medium text-purple-400 mb-1">Earn Programs</div>
+                  <p className="text-gray-400">LP et earn sur Myriad pour du yield + exposure aux marchés</p>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
+        {/* ==================== STOCKS TAB ==================== */}
         {activeTab === 'stocks' && (
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {Object.entries(CONFIG.watchlists).map(([sector, data]) => { const stocks = stockPrices[sector] || []; const avgChange = stocks.length ? stocks.reduce((a, b) => a + parseFloat(b.change), 0) / stocks.length : 0; return <Card key={sector}><h4 className="font-semibold capitalize text-sm">{sector.replace('_', ' ')}</h4><div className="flex justify-between items-center mt-1"><span className="text-xs text-gray-500">{data.symbols.length} stocks</span><Change value={avgChange} /></div></Card>; })}
+          <div className="grid lg:grid-cols-3 gap-6">
+            
+            {/* Left: Groups & Chart */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* Chart */}
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3">📈 Chart - {selectedStock}</h3>
+                <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
+                  <iframe
+                    src={`https://www.tradingview.com/widgetembed/?symbol=${selectedStock}&interval=D&theme=dark&style=1&timezone=exchange&withdateranges=1&hide_side_toolbar=0&allow_symbol_change=1&details=1&calendar=0`}
+                    className="w-full h-full border-0"
+                    title="TradingView Chart"
+                  />
+                </div>
+              </div>
+
+              {/* Add Group Form */}
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Icons.Plus />
+                  Ajouter un groupe
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nom du groupe"
+                    value={newGroup.name}
+                    onChange={e => setNewGroup({...newGroup, name: e.target.value})}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Symbols (CCJ, URA, URNM...)"
+                    value={newGroup.symbols}
+                    onChange={e => setNewGroup({...newGroup, symbols: e.target.value})}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    onClick={addStockGroup}
+                    className="bg-blue-600 hover:bg-blue-700 rounded-lg px-4 py-2 text-sm font-medium"
+                  >
+                    Ajouter
+                  </button>
+                </div>
+              </div>
             </div>
-            {Object.entries(CONFIG.watchlists).map(([sector, data]) => { const stocks = stockPrices[sector] || []; return <Card key={sector}><h3 className="font-semibold capitalize mb-2">{sector.replace('_', ' ')}</h3><p className="text-xs text-gray-500 mb-3">{data.thesis}</p><div className="grid grid-cols-2 lg:grid-cols-5 gap-2">{stocks.map((s, i) => <div key={i} className="p-2 bg-gray-800/50 rounded"><div className="font-mono font-bold">{s.symbol}</div><div className="text-sm">${s.price}</div><Change value={parseFloat(s.change)} /></div>)}</div></Card>; })}
-          </>
+
+            {/* Right: Watchlists */}
+            <div className="space-y-4">
+              {stockGroups.map(group => (
+                <div key={group.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold">{group.name}</h3>
+                    <button onClick={() => deleteStockGroup(group.id)} className="text-red-400 hover:text-red-300">
+                      <Icons.Trash />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {group.symbols.map(symbol => (
+                      <button
+                        key={symbol}
+                        onClick={() => setSelectedStock(symbol)}
+                        className={`px-3 py-1 rounded-lg text-sm font-mono transition-colors ${
+                          selectedStock === symbol 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-gray-800 hover:bg-gray-700'
+                        }`}
+                      >
+                        {symbol}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <h3 className="font-semibold mb-3">🔗 Liens rapides</h3>
+                <div className="space-y-2">
+                  <a href="https://finviz.com/map.ashx" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg hover:bg-gray-800">
+                    <span>Finviz Heatmap</span>
+                    <Icons.ExternalLink />
+                  </a>
+                  <a href="https://www.tradingview.com/screener/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg hover:bg-gray-800">
+                    <span>TradingView Screener</span>
+                    <Icons.ExternalLink />
+                  </a>
+                  <a href="https://www.barchart.com/stocks/performance/percent-change/advances" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg hover:bg-gray-800">
+                    <span>Barchart Top Gainers</span>
+                    <Icons.ExternalLink />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
-        {activeTab === 'risk' && (
-          <>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card><div className="text-gray-500 text-xs uppercase">Capital Total</div><div className="text-2xl font-bold">${totalCapital.toLocaleString()}</div></Card>
-              <Card><div className="text-gray-500 text-xs uppercase">Plateformes</div><div className="text-2xl font-bold">{platformPcts.length}</div></Card>
-              <Card><div className="text-gray-500 text-xs uppercase">Risk Score</div><div className="text-2xl font-bold">{riskScore.toFixed(0)}/100</div><ProgressBar value={riskScore} color={riskScore < 40 ? 'green' : riskScore < 70 ? 'yellow' : 'red'} /></Card>
-              <Card><div className="text-gray-500 text-xs uppercase">Alertes</div><div className="text-2xl font-bold">{alerts.length}</div></Card>
-            </div>
-            <Card alert={alerts.length > 0}><div className="flex items-center gap-2 mb-3"><Icons.Shield /><span className="font-semibold">Alertes Risk Management</span></div>{alerts.length > 0 ? alerts.map((a, i) => <div key={i} className="flex items-center gap-2 p-2 bg-yellow-900/30 rounded mb-2"><Icons.AlertTriangle /><span className="text-sm">{a}</span></div>) : <div className="flex items-center gap-2 p-2 bg-green-900/30 rounded"><Icons.Check /><span className="text-sm text-green-400">Tout est OK</span></div>}</Card>
-            <Card><h3 className="font-semibold mb-3">Répartition</h3>{platformPcts.map((p, i) => <div key={i} className="mb-2"><div className="flex justify-between text-sm mb-1"><span>{p.name}</span><span>${p.size.toLocaleString()} ({p.pct}%)</span></div><ProgressBar value={parseFloat(p.pct)} color={parseFloat(p.pct) > 30 ? 'red' : 'blue'} /></div>)}</Card>
-          </>
-        )}
       </main>
-      <footer className="mt-8 pt-4 border-t border-gray-800 text-center text-gray-600 text-sm">Dashboard personnel • Data simulée</footer>
+
+      <footer className="border-t border-gray-800 py-4 mt-8">
+        <div className="max-w-7xl mx-auto px-4 text-center text-gray-600 text-sm">
+          Données sauvegardées localement • Dashboard personnel
+        </div>
+      </footer>
     </div>
   );
 }
