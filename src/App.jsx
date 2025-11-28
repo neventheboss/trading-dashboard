@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // ==================== ICONS ====================
 const Icons = {
@@ -8,6 +8,9 @@ const Icons = {
   External: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>,
   Target: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
   Chart: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>,
+  Refresh: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>,
+  X: () => <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>,
+  Grid: () => <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>,
 };
 
 // ==================== CONFIG ====================
@@ -32,46 +35,137 @@ const PREDICTION_SITES = [
   { name: 'XO Market', url: 'https://beta.xo.market/markets?sort=volume-high-to-low', desc: 'Beta', color: '#06b6d4' },
 ];
 
-const HEATMAP_OPTIONS = [
-  { id: 'stocks', label: 'US Stocks', dataSource: 'SPX500' },
-  { id: 'etf', label: 'ETFs', dataSource: 'AllUSEtf' },
-  { id: 'crypto', label: 'Crypto', dataSource: 'Crypto' },
-  { id: 'forex', label: 'Forex', dataSource: 'Forex' },
+const DEFAULT_WATCHLIST = [
+  { symbol: 'CCJ', group: 'Uranium' },
+  { symbol: 'URA', group: 'Uranium' },
+  { symbol: 'URNM', group: 'Uranium' },
+  { symbol: 'NXE', group: 'Uranium' },
+  { symbol: 'DNN', group: 'Uranium' },
+  { symbol: 'NVDA', group: 'Semis' },
+  { symbol: 'ASML', group: 'Semis' },
+  { symbol: 'TSM', group: 'Semis' },
+  { symbol: 'AMD', group: 'Semis' },
+  { symbol: 'LRCX', group: 'Semis' },
+  { symbol: 'RKLB', group: 'Space' },
+  { symbol: 'PL', group: 'Space' },
+  { symbol: 'LUNR', group: 'Space' },
+  { symbol: 'PLTR', group: 'Defense' },
+  { symbol: 'LMT', group: 'Defense' },
+  { symbol: 'RTX', group: 'Defense' },
+  { symbol: 'AVAV', group: 'Defense' },
+  { symbol: 'EWJ', group: 'Japan' },
+  { symbol: 'DXJ', group: 'Japan' },
+  { symbol: 'FCX', group: 'Copper' },
+  { symbol: 'SCCO', group: 'Copper' },
+  { symbol: 'PWR', group: 'Energy' },
+  { symbol: 'ETN', group: 'Energy' },
 ];
 
 // ==================== MAIN APP ====================
 export default function App() {
-  const [activeTab, setActiveTab] = useState('funding');
-  const [heatmapType, setHeatmapType] = useState('stocks');
+  const [activeTab, setActiveTab] = useState('stocks');
   
+  // ===== WATCHLIST STATE =====
+  const [watchlist, setWatchlist] = useState(() => {
+    const saved = localStorage.getItem('watchlist_v5');
+    return saved ? JSON.parse(saved) : DEFAULT_WATCHLIST;
+  });
+  const [stockData, setStockData] = useState({});
+  const [loadingStocks, setLoadingStocks] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [newStock, setNewStock] = useState({ symbol: '', group: '' });
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [viewMode, setViewMode] = useState('heatmap'); // 'heatmap' or 'chart'
+
   // ===== FUNDING STATE =====
   const [positions, setPositions] = useState(() => {
-    const saved = localStorage.getItem('positions_v4');
+    const saved = localStorage.getItem('positions_v5');
     return saved ? JSON.parse(saved) : [];
   });
-  
   const [newPos, setNewPos] = useState({
-    pair: '',
-    longPlatform: 'hyperliquid',
-    shortPlatform: 'binance',
-    longCapital: '',
-    shortCapital: '',
-    longLeverage: '10',
-    shortLeverage: '10',
-    longApr: '',
-    shortApr: '',
+    pair: '', longPlatform: 'hyperliquid', shortPlatform: 'binance',
+    longCapital: '', shortCapital: '', longLeverage: '10', shortLeverage: '10',
+    longApr: '', shortApr: '',
   });
 
   // ===== PERSISTENCE =====
   useEffect(() => {
-    localStorage.setItem('positions_v4', JSON.stringify(positions));
+    localStorage.setItem('watchlist_v5', JSON.stringify(watchlist));
+  }, [watchlist]);
+
+  useEffect(() => {
+    localStorage.setItem('positions_v5', JSON.stringify(positions));
   }, [positions]);
 
-  // ===== CALCULATIONS =====
+  // ===== FETCH STOCK DATA =====
+  const fetchStockData = useCallback(async () => {
+    if (watchlist.length === 0) return;
+    
+    setLoadingStocks(true);
+    const symbols = watchlist.map(s => s.symbol).join(',');
+    
+    try {
+      // Using Yahoo Finance via a CORS proxy
+      const response = await fetch(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const quotes = data?.quoteResponse?.result || [];
+        const newData = {};
+        quotes.forEach(q => {
+          newData[q.symbol] = {
+            price: q.regularMarketPrice || 0,
+            change: q.regularMarketChangePercent || 0,
+            name: q.shortName || q.symbol,
+            marketCap: q.marketCap || 0,
+          };
+        });
+        setStockData(newData);
+        setLastUpdate(new Date());
+      }
+    } catch (e) {
+      console.log('Direct Yahoo failed, trying proxy...');
+      
+      // Fallback: try with allorigins proxy
+      try {
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`)}`;
+        const response = await fetch(proxyUrl);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const quotes = data?.quoteResponse?.result || [];
+          const newData = {};
+          quotes.forEach(q => {
+            newData[q.symbol] = {
+              price: q.regularMarketPrice || 0,
+              change: q.regularMarketChangePercent || 0,
+              name: q.shortName || q.symbol,
+              marketCap: q.marketCap || 0,
+            };
+          });
+          setStockData(newData);
+          setLastUpdate(new Date());
+        }
+      } catch (e2) {
+        console.error('Proxy also failed:', e2);
+      }
+    }
+    
+    setLoadingStocks(false);
+  }, [watchlist]);
+
+  useEffect(() => {
+    fetchStockData();
+    const interval = setInterval(fetchStockData, 60000); // Refresh every minute
+    return () => clearInterval(interval);
+  }, [fetchStockData]);
+
+  // ===== FUNDING CALCULATIONS =====
   const totalCapital = positions.reduce((a, b) => a + Number(b.longCapital || 0) + Number(b.shortCapital || 0), 0);
   const totalLongNotional = positions.reduce((a, b) => a + (Number(b.longCapital || 0) * Number(b.longLeverage || 1)), 0);
   const totalShortNotional = positions.reduce((a, b) => a + (Number(b.shortCapital || 0) * Number(b.shortLeverage || 1)), 0);
-  
   const yearlyYield = positions.reduce((a, b) => {
     const longNotional = Number(b.longCapital || 0) * Number(b.longLeverage || 1);
     const shortNotional = Number(b.shortCapital || 0) * Number(b.shortLeverage || 1);
@@ -81,6 +175,19 @@ export default function App() {
   }, 0);
 
   // ===== HANDLERS =====
+  const addStock = () => {
+    if (!newStock.symbol) return;
+    const symbol = newStock.symbol.toUpperCase().trim();
+    if (watchlist.find(s => s.symbol === symbol)) return;
+    setWatchlist([...watchlist, { symbol, group: newStock.group || 'Other' }]);
+    setNewStock({ symbol: '', group: '' });
+    setTimeout(fetchStockData, 100);
+  };
+
+  const deleteStock = (symbol) => {
+    setWatchlist(watchlist.filter(s => s.symbol !== symbol));
+  };
+
   const addPosition = () => {
     if (!newPos.pair) return;
     setPositions([...positions, { id: Date.now(), ...newPos }]);
@@ -93,25 +200,31 @@ export default function App() {
 
   const deletePosition = (id) => setPositions(positions.filter(p => p.id !== id));
 
+  // ===== COMPUTED =====
+  const groups = [...new Set(watchlist.map(s => s.group))];
+  
+  const getColor = (change) => {
+    const c = parseFloat(change) || 0;
+    if (c > 5) return '#22c55e';
+    if (c > 3) return '#16a34a';
+    if (c > 1) return '#15803d';
+    if (c > 0) return '#166534';
+    if (c > -1) return '#7f1d1d';
+    if (c > -3) return '#991b1b';
+    if (c > -5) return '#b91c1c';
+    return '#dc2626';
+  };
+
   const tabs = [
+    { id: 'stocks', label: 'Stocks', icon: Icons.Chart },
     { id: 'funding', label: 'Funding', icon: Icons.Zap },
     { id: 'predictions', label: 'Predictions', icon: Icons.Target },
-    { id: 'stocks', label: 'Heatmap', icon: Icons.Chart },
   ];
-
-  // TradingView Heatmap URL
-  const getHeatmapUrl = () => {
-    const option = HEATMAP_OPTIONS.find(o => o.id === heatmapType);
-    if (heatmapType === 'crypto') {
-      return `https://www.tradingview.com/embed-widget/crypto-coins-heatmap/?locale=en#%7B%22dataSource%22%3A%22Crypto%22%2C%22blockSize%22%3A%22market_cap_calc%22%2C%22blockColor%22%3A%22change%22%2C%22symbolUrl%22%3A%22%22%2C%22colorTheme%22%3A%22dark%22%2C%22hasTopBar%22%3Afalse%2C%22isDataSet498Enabled%22%3Atrue%2C%22isZoomEnabled%22%3Atrue%2C%22hasSymbolTooltip%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D`;
-    }
-    return `https://www.tradingview.com/embed-widget/stock-heatmap/?locale=en#%7B%22exchanges%22%3A%5B%5D%2C%22dataSource%22%3A%22${option?.dataSource || 'SPX500'}%22%2C%22grouping%22%3A%22sector%22%2C%22blockSize%22%3A%22market_cap_basic%22%2C%22blockColor%22%3A%22change%22%2C%22symbolUrl%22%3A%22%22%2C%22colorTheme%22%3A%22dark%22%2C%22hasTopBar%22%3Afalse%2C%22isDataSetEnabled%22%3Atrue%2C%22isZoomEnabled%22%3Atrue%2C%22hasSymbolTooltip%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22100%25%22%7D`;
-  };
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* HEADER */}
-      <header className="border-b border-white/5 sticky top-0 z-50 bg-[#0a0a0a]/90 backdrop-blur-xl">
+      <header className="border-b border-white/5 sticky top-0 z-50 bg-[#0a0a0a]/95 backdrop-blur">
         <div className="max-w-[1800px] mx-auto px-4 h-12 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center">
@@ -137,10 +250,181 @@ export default function App() {
 
       <main className="max-w-[1800px] mx-auto px-4 py-4">
 
+        {/* ==================== STOCKS ==================== */}
+        {activeTab === 'stocks' && (
+          <div className="space-y-4">
+            {/* Controls */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode('heatmap')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    viewMode === 'heatmap' ? 'bg-white text-black' : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <Icons.Grid /> Heatmap
+                </button>
+                <button
+                  onClick={() => setViewMode('chart')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    viewMode === 'chart' ? 'bg-white text-black' : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <Icons.Chart /> Chart
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {lastUpdate && (
+                  <span className="text-xs text-white/30">
+                    Màj: {lastUpdate.toLocaleTimeString()}
+                  </span>
+                )}
+                <button
+                  onClick={fetchStockData}
+                  className={`p-2 rounded-lg bg-white/5 hover:bg-white/10 ${loadingStocks ? 'animate-spin' : ''}`}
+                >
+                  <Icons.Refresh />
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  placeholder="SYMBOL"
+                  value={newStock.symbol}
+                  onChange={e => setNewStock({ ...newStock, symbol: e.target.value.toUpperCase() })}
+                  onKeyDown={e => e.key === 'Enter' && addStock()}
+                  className="w-24 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm font-mono uppercase focus:outline-none focus:border-white/30"
+                />
+                <input
+                  placeholder="Group"
+                  value={newStock.group}
+                  onChange={e => setNewStock({ ...newStock, group: e.target.value })}
+                  onKeyDown={e => e.key === 'Enter' && addStock()}
+                  className="w-28 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-white/30"
+                />
+                <button onClick={addStock} className="p-2 bg-white text-black rounded-lg hover:bg-white/90">
+                  <Icons.Plus />
+                </button>
+              </div>
+            </div>
+
+            {viewMode === 'heatmap' ? (
+              /* ===== HEATMAP VIEW ===== */
+              <div className="space-y-6">
+                {groups.map(group => {
+                  const groupStocks = watchlist.filter(s => s.group === group);
+                  return (
+                    <div key={group}>
+                      <div className="text-xs uppercase tracking-widest text-white/30 mb-2">{group}</div>
+                      <div className="flex flex-wrap gap-2">
+                        {groupStocks.map(stock => {
+                          const data = stockData[stock.symbol] || {};
+                          const change = data.change || 0;
+                          const marketCap = data.marketCap || 1;
+                          // Size based on market cap (min 120px, max 250px)
+                          const size = Math.max(120, Math.min(250, Math.log10(marketCap) * 20));
+                          
+                          return (
+                            <div
+                              key={stock.symbol}
+                              onClick={() => { setSelectedStock(stock.symbol); setViewMode('chart'); }}
+                              className="relative cursor-pointer group transition-transform hover:scale-105"
+                              style={{
+                                width: `${size}px`,
+                                height: `${size * 0.6}px`,
+                                backgroundColor: getColor(change),
+                                borderRadius: '8px',
+                              }}
+                            >
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deleteStock(stock.symbol); }}
+                                className="absolute top-1 right-1 p-1 rounded bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
+                              >
+                                <Icons.X />
+                              </button>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center p-2">
+                                <div className="font-bold text-white text-lg drop-shadow-lg">{stock.symbol}</div>
+                                <div className="text-white/90 text-sm drop-shadow">
+                                  {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                                </div>
+                                {data.price > 0 && (
+                                  <div className="text-white/60 text-xs">${data.price.toFixed(2)}</div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {watchlist.length === 0 && (
+                  <div className="text-center py-20 text-white/30">
+                    Ajoute des stocks avec le formulaire ci-dessus
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ===== CHART VIEW ===== */
+              <div className="grid lg:grid-cols-5 gap-4">
+                {/* Chart */}
+                <div className="lg:col-span-4 bg-white/[0.02] rounded-xl border border-white/5 overflow-hidden" style={{ height: '600px' }}>
+                  {selectedStock ? (
+                    <iframe
+                      src={`https://www.tradingview.com/widgetembed/?symbol=${selectedStock}&interval=D&theme=dark&style=1&timezone=exchange&hide_side_toolbar=0`}
+                      className="w-full h-full border-0"
+                      title="Chart"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-white/30">
+                      Sélectionne un stock
+                    </div>
+                  )}
+                </div>
+                
+                {/* Stock List */}
+                <div className="space-y-1 max-h-[600px] overflow-y-auto">
+                  {groups.map(group => (
+                    <div key={group} className="mb-3">
+                      <div className="text-[10px] uppercase tracking-widest text-white/30 mb-1 px-2">{group}</div>
+                      {watchlist.filter(s => s.group === group).map(stock => {
+                        const data = stockData[stock.symbol] || {};
+                        const change = data.change || 0;
+                        return (
+                          <button
+                            key={stock.symbol}
+                            onClick={() => setSelectedStock(stock.symbol)}
+                            className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-all ${
+                              selectedStock === stock.symbol 
+                                ? 'bg-white text-black' 
+                                : 'bg-white/[0.02] hover:bg-white/[0.05]'
+                            }`}
+                          >
+                            <span className="font-mono font-bold text-sm">{stock.symbol}</span>
+                            <span className={`text-xs font-mono ${
+                              selectedStock === stock.symbol 
+                                ? '' 
+                                : change >= 0 ? 'text-emerald-400' : 'text-red-400'
+                            }`}>
+                              {change >= 0 ? '+' : ''}{change.toFixed(2)}%
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ==================== FUNDING ==================== */}
         {activeTab === 'funding' && (
           <div className="space-y-4">
-            {/* Stats Row */}
+            {/* Stats */}
             <div className="grid grid-cols-5 gap-3">
               {[
                 { label: 'Capital', value: `$${totalCapital.toLocaleString()}` },
@@ -157,28 +441,20 @@ export default function App() {
             </div>
 
             <div className="grid lg:grid-cols-4 gap-4">
-              {/* Main Content */}
               <div className="lg:col-span-3 space-y-4">
                 {/* Add Position */}
                 <div className="bg-white/[0.03] rounded-lg p-4 border border-white/5">
                   <div className="text-[10px] uppercase tracking-wider text-white/30 mb-3">Nouvelle Position</div>
-                  
                   <div className="space-y-2">
-                    {/* Pair Input */}
                     <input
                       placeholder="PAIR (BTC, ETH, EUR/USD...)"
                       value={newPos.pair}
                       onChange={e => setNewPos({...newPos, pair: e.target.value.toUpperCase()})}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono placeholder:text-white/20 focus:outline-none focus:border-white/20"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm font-mono placeholder:text-white/20 focus:outline-none"
                     />
-
-                    {/* Long Row */}
                     <div className="flex gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                      <select
-                        value={newPos.longPlatform}
-                        onChange={e => setNewPos({...newPos, longPlatform: e.target.value})}
-                        className="bg-transparent text-emerald-400 text-sm focus:outline-none flex-1"
-                      >
+                      <select value={newPos.longPlatform} onChange={e => setNewPos({...newPos, longPlatform: e.target.value})}
+                        className="bg-transparent text-emerald-400 text-sm focus:outline-none flex-1">
                         {FUNDING_PLATFORMS.map(p => <option key={p.id} value={p.id} className="bg-black">{p.name}</option>)}
                       </select>
                       <input placeholder="$" type="number" value={newPos.longCapital}
@@ -192,14 +468,9 @@ export default function App() {
                         className="w-20 bg-transparent border-l border-emerald-500/30 pl-2 text-sm text-emerald-400 focus:outline-none" />
                       <span className="text-emerald-400 text-xs font-bold self-center px-2">LONG</span>
                     </div>
-
-                    {/* Short Row */}
                     <div className="flex gap-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20">
-                      <select
-                        value={newPos.shortPlatform}
-                        onChange={e => setNewPos({...newPos, shortPlatform: e.target.value})}
-                        className="bg-transparent text-red-400 text-sm focus:outline-none flex-1"
-                      >
+                      <select value={newPos.shortPlatform} onChange={e => setNewPos({...newPos, shortPlatform: e.target.value})}
+                        className="bg-transparent text-red-400 text-sm focus:outline-none flex-1">
                         {FUNDING_PLATFORMS.map(p => <option key={p.id} value={p.id} className="bg-black">{p.name}</option>)}
                       </select>
                       <input placeholder="$" type="number" value={newPos.shortCapital}
@@ -213,14 +484,13 @@ export default function App() {
                         className="w-20 bg-transparent border-l border-red-500/30 pl-2 text-sm text-red-400 focus:outline-none" />
                       <span className="text-red-400 text-xs font-bold self-center px-2">SHORT</span>
                     </div>
-
                     <button onClick={addPosition} className="w-full bg-white text-black rounded-lg py-2 text-sm font-semibold hover:bg-white/90">
                       Ajouter
                     </button>
                   </div>
                 </div>
 
-                {/* Positions Table */}
+                {/* Positions */}
                 <div className="bg-white/[0.03] rounded-lg border border-white/5 overflow-hidden">
                   <table className="w-full text-sm">
                     <thead>
@@ -242,17 +512,16 @@ export default function App() {
                         const avgNotional = (longNotional + shortNotional) / 2;
                         const netApr = Math.abs(Number(pos.longApr || 0)) + Math.abs(Number(pos.shortApr || 0));
                         const daily = (avgNotional * netApr / 100) / 365;
-                        
                         return (
                           <tr key={pos.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                             <td className="p-3 font-mono font-bold">{pos.pair}</td>
                             <td className="p-3 text-xs">
-                              <span style={{ color: longP?.color }}>{longP?.name}</span>
+                              <span style={{color: longP?.color}}>{longP?.name}</span>
                               <span className="text-white/40 ml-1">${longNotional.toLocaleString()}</span>
                               <span className="text-emerald-400 ml-1">+{pos.longApr}%</span>
                             </td>
                             <td className="p-3 text-xs">
-                              <span style={{ color: shortP?.color }}>{shortP?.name}</span>
+                              <span style={{color: shortP?.color}}>{shortP?.name}</span>
                               <span className="text-white/40 ml-1">${shortNotional.toLocaleString()}</span>
                               <span className="text-red-400 ml-1">-{pos.shortApr}%</span>
                             </td>
@@ -280,44 +549,20 @@ export default function App() {
                   <div className="text-[10px] uppercase tracking-wider text-white/30 mb-2">Plateformes</div>
                   {FUNDING_PLATFORMS.map(p => (
                     <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 rounded hover:bg-white/5 transition-colors text-sm">
+                      className="flex items-center justify-between p-2 rounded hover:bg-white/5 text-sm">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                        <div className="w-2 h-2 rounded-full" style={{backgroundColor: p.color}} />
                         <span>{p.name}</span>
                       </div>
                       <Icons.External />
                     </a>
                   ))}
                 </div>
-
                 <a href="https://fundingview.app/dashboard" target="_blank" rel="noopener noreferrer"
                   className="block bg-gradient-to-br from-fuchsia-600/20 to-violet-600/20 rounded-lg p-3 border border-fuchsia-500/20 hover:border-fuchsia-500/40">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-sm">FundingView</div>
-                      <div className="text-[10px] text-white/40">Compare les fundings</div>
-                    </div>
-                    <Icons.External />
-                  </div>
+                  <div className="font-semibold text-sm">FundingView</div>
+                  <div className="text-[10px] text-white/40">Compare les fundings</div>
                 </a>
-
-                <div className="bg-white/[0.03] rounded-lg p-3 border border-white/5">
-                  <div className="text-[10px] uppercase tracking-wider text-white/30 mb-2">Résumé</div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-white/40">Positions</span>
-                      <span>{positions.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/40">Yield/mois</span>
-                      <span className="text-emerald-400">${(yearlyYield / 12).toFixed(0)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/40">ROI annuel</span>
-                      <span className="text-emerald-400">{totalCapital > 0 ? ((yearlyYield / totalCapital) * 100).toFixed(1) : 0}%</span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -328,54 +573,15 @@ export default function App() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {PREDICTION_SITES.map(site => (
               <a key={site.name} href={site.url} target="_blank" rel="noopener noreferrer"
-                className="bg-white/[0.03] rounded-lg p-4 border border-white/5 hover:bg-white/[0.05] hover:border-white/10 transition-all">
+                className="bg-white/[0.03] rounded-lg p-4 border border-white/5 hover:bg-white/[0.05] transition-all">
                 <div className="flex items-center justify-between mb-2">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: site.color }} />
+                  <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: site.color}} />
                   <Icons.External />
                 </div>
                 <div className="font-semibold mb-0.5">{site.name}</div>
                 <div className="text-xs text-white/40">{site.desc}</div>
               </a>
             ))}
-          </div>
-        )}
-
-        {/* ==================== HEATMAP ==================== */}
-        {activeTab === 'stocks' && (
-          <div className="space-y-3">
-            {/* Heatmap Type Selector */}
-            <div className="flex gap-2">
-              {HEATMAP_OPTIONS.map(option => (
-                <button
-                  key={option.id}
-                  onClick={() => setHeatmapType(option.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    heatmapType === option.id ? 'bg-white text-black' : 'bg-white/5 text-white/50 hover:text-white'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-              
-              {/* Quick links */}
-              <div className="ml-auto flex gap-2">
-                <a href="https://finviz.com/map.ashx" target="_blank" rel="noopener noreferrer"
-                  className="px-4 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 flex items-center gap-2">
-                  Finviz <Icons.External />
-                </a>
-              </div>
-            </div>
-
-            {/* TradingView Heatmap */}
-            <div className="bg-white/[0.03] rounded-lg border border-white/5 overflow-hidden" style={{ height: 'calc(100vh - 180px)' }}>
-              <iframe
-                key={heatmapType}
-                src={getHeatmapUrl()}
-                className="w-full h-full border-0"
-                title="Heatmap"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              />
-            </div>
           </div>
         )}
       </main>
