@@ -16,7 +16,7 @@ const Icons = {
   Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>,
 };
 
-// ==================== FUNDING PLATFORMS ====================
+// ==================== FUNDING PLATFORMS (Updated - Vertex, dYdX, GMX removed) ====================
 const FUNDING_PLATFORMS = [
   { id: 'hyperliquid', name: 'Hyperliquid', url: 'https://app.hyperliquid.xyz/trade', color: '#4ade80', logo: 'https://www.google.com/s2/favicons?domain=hyperliquid.xyz&sz=128' },
   { id: 'vest', name: 'Vest', url: 'https://vest.exchange/', color: '#a78bfa', logo: 'https://www.google.com/s2/favicons?domain=vest.exchange&sz=128' },
@@ -25,12 +25,9 @@ const FUNDING_PLATFORMS = [
   { id: 'extended', name: 'Extended', url: 'https://extended.exchange/', color: '#60a5fa', logo: 'https://www.google.com/s2/favicons?domain=extended.exchange&sz=128' },
   { id: 'lighter', name: 'Lighter', url: 'https://lighter.xyz/', color: '#22d3ee', logo: 'https://www.google.com/s2/favicons?domain=lighter.xyz&sz=128' },
   { id: 'xyz', name: 'XYZ', url: 'https://app.trade.xyz/trade', color: '#facc15', logo: 'https://www.google.com/s2/favicons?domain=trade.xyz&sz=128' },
-  { id: 'vertex', name: 'Vertex', url: 'https://app.vertexprotocol.com/', color: '#8b5cf6', logo: 'https://www.google.com/s2/favicons?domain=vertexprotocol.com&sz=128' },
-  { id: 'dydx', name: 'dYdX', url: 'https://trade.dydx.exchange/', color: '#6366f1', logo: 'https://www.google.com/s2/favicons?domain=dydx.exchange&sz=128' },
-  { id: 'gmx', name: 'GMX', url: 'https://app.gmx.io/', color: '#3b82f6', logo: 'https://www.google.com/s2/favicons?domain=gmx.io&sz=128' },
 ];
 
-// ==================== PAIRS BY PLATFORM ====================
+// ==================== PAIRS BY PLATFORM (Updated - Vertex, dYdX, GMX removed) ====================
 const PAIRS_BY_PLATFORM = {
   hyperliquid: {
     crypto: ['BTC', 'ETH', 'SOL', 'ARB', 'OP', 'AVAX', 'DOGE', 'MATIC', 'LINK', 'UNI', 'AAVE', 'LDO', 'MKR', 'CRV', 'SNX', 'SUI', 'APT', 'INJ', 'SEI', 'TIA', 'STRK', 'JUP', 'WIF', 'PEPE', 'BONK', 'NEAR', 'FTM', 'ATOM', 'DOT', 'ADA', 'XRP', 'LTC', 'HYPE', 'RENDER', 'TAO', 'WLD', 'PYTH', 'JTO', 'ONDO'],
@@ -54,12 +51,9 @@ const PAIRS_BY_PLATFORM = {
   extended: { crypto: ['BTC', 'ETH', 'SOL', 'ARB', 'OP', 'AVAX', 'DOGE', 'LINK', 'UNI', 'AAVE'], forex: [], commodities: [], indices: [], stocks: [] },
   lighter: { crypto: ['BTC', 'ETH', 'SOL', 'ARB', 'AVAX', 'LINK'], forex: [], commodities: [], indices: [], stocks: [] },
   xyz: { crypto: ['BTC', 'ETH', 'SOL', 'HYPE'], forex: [], commodities: [], indices: [], stocks: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD', 'COIN', 'MSTR'] },
-  vertex: { crypto: ['BTC', 'ETH', 'SOL', 'ARB', 'OP', 'AVAX', 'DOGE', 'LINK', 'UNI', 'AAVE', 'SUI', 'APT', 'INJ', 'SEI'], forex: [], commodities: [], indices: [], stocks: [] },
-  dydx: { crypto: ['BTC', 'ETH', 'SOL', 'AVAX', 'DOGE', 'LINK', 'UNI', 'AAVE', 'NEAR', 'ATOM', 'DOT', 'ADA', 'XRP', 'LTC'], forex: [], commodities: [], indices: [], stocks: [] },
-  gmx: { crypto: ['BTC', 'ETH', 'SOL', 'ARB', 'AVAX', 'DOGE', 'LINK', 'UNI', 'NEAR', 'ATOM'], forex: [], commodities: [], indices: [], stocks: [] },
 };
 
-// ==================== PREDICTIONS ====================
+// ==================== PREDICTIONS (Updated - Myriad Profile) ====================
 const PREDICTION_PLATFORMS = [
   { id: 'polymarket', name: 'Polymarket', url: 'https://polymarket.com/', profileUrl: 'https://polymarket.com/@Burlakinho', color: '#6366f1', twitter: 'Polymarket', logo: 'https://www.google.com/s2/favicons?domain=polymarket.com&sz=128' },
   { id: 'myriad', name: 'Myriad', url: 'https://myriad.markets/earn', profileUrl: 'https://myriad.markets/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#8b5cf6', twitter: 'MyriadMarkets', logo: 'https://www.google.com/s2/favicons?domain=myriad.markets&sz=128' },
@@ -117,15 +111,16 @@ const useFetchPredictionStats = (setPredictionStats) => {
     // --- SIMULATION API AVEC VOS DONNÉES EN DIRECT ---
     await new Promise(resolve => setTimeout(resolve, 500)); 
     const simulatedData = {
-      polymarket: { rank: 45, pnl: 21500, positions: 68, volume: 450000 }, // Données Burlakinho simulées
-      myriad: { rank: 8, pnl: 8900, positions: 14, volume: 85000 },
+      // Burlakinho (Polymarket)
+      polymarket: { rank: 45, pnl: 21500, positions: 68, volume: 450000 }, 
+      // DABOSS (Myriad) - Stats simulées basées sur l'image fournie
+      myriad: { rank: 862, pnl: 4, positions: 14, volume: 45400 }, 
       myriadbnb: { rank: 3, pnl: 12000, positions: 9, volume: 60000 },
       limitless: { rank: 18, pnl: 2500, positions: 32, volume: 120000 },
       xomarket: { rank: 5, pnl: 15000, positions: 18, volume: 250000 },
     };
     // --------------------------
     setPredictionStats(prev => {
-        // Garde les données manuelles non simulées, écrase celles qui le sont.
         const manualStats = Object.keys(prev).reduce((acc, key) => {
             if (!simulatedData[key]) {
                  acc[key] = prev[key];
@@ -138,6 +133,44 @@ const useFetchPredictionStats = (setPredictionStats) => {
 
   return fetchStats;
 };
+
+
+// Custom Platform Dropdown Component (for better UI consistency)
+const PlatformSelect = ({ platforms, selectedId, onChange, colorClass, label }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const selected = platforms.find(p => p.id === selectedId);
+
+  return (
+    <div className="relative">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between bg-black/30 border ${colorClass} rounded-lg px-3 py-2 text-sm focus:outline-none transition-colors`}
+      >
+        <div className="flex items-center gap-2">
+            <img src={selected?.logo} alt="" className="w-4 h-4 rounded" />
+            <span className={`font-bold ${label === '⬆️ Long Platform' ? 'text-emerald-400' : 'text-red-400'}`}>{selected?.name}</span>
+        </div>
+        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-30 w-full mt-1 rounded-xl bg-[#18181b] border border-white/[0.06] shadow-xl max-h-60 overflow-y-auto">
+          {platforms.map(p => (
+            <button 
+              key={p.id} 
+              onClick={() => { onChange(p.id); setIsOpen(false); }} 
+              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-white/10 transition-colors ${selectedId === p.id ? 'bg-white/5 font-medium' : ''}`}
+            >
+              <img src={p.logo} alt="" className="w-4 h-4 rounded" />
+              <span style={{color: p.color}}>{p.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 
 // ==================== MAIN ====================
 export default function App() {
@@ -351,15 +384,25 @@ export default function App() {
                 <div className="space-y-4">
                   <div className="bg-emerald-500/5 rounded-xl p-4 border border-emerald-500/20">
                     <div className="text-xs text-emerald-400 uppercase tracking-wider mb-2 font-bold">⬆️ Long Platform</div>
-                    <select value={longPlatform} onChange={e => { setLongPlatform(e.target.value); setSelectedPair(null); }} className="w-full bg-black/30 border border-emerald-500/30 rounded-lg px-3 py-2 text-emerald-400 focus:outline-none">
-                      {FUNDING_PLATFORMS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                    {/* CUSTOM SELECT LONG */}
+                    <PlatformSelect
+                        platforms={FUNDING_PLATFORMS}
+                        selectedId={longPlatform}
+                        onChange={id => { setLongPlatform(id); setSelectedPair(null); }}
+                        colorClass="border-emerald-500/30"
+                        label="⬆️ Long Platform"
+                    />
                   </div>
                   <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
                     <div className="text-xs text-red-400 uppercase tracking-wider mb-2 font-bold">⬇️ Short Platform</div>
-                    <select value={shortPlatform} onChange={e => { setShortPlatform(e.target.value); setSelectedPair(null); }} className="w-full bg-black/30 border border-red-500/30 rounded-lg px-3 py-2 text-red-400 focus:outline-none">
-                      {FUNDING_PLATFORMS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                    {/* CUSTOM SELECT SHORT */}
+                    <PlatformSelect
+                        platforms={FUNDING_PLATFORMS}
+                        selectedId={shortPlatform}
+                        onChange={id => { setShortPlatform(id); setSelectedPair(null); }}
+                        colorClass="border-red-500/30"
+                        label="⬇️ Short Platform"
+                    />
                   </div>
                   <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.06]">
                     <div className="text-xs text-white/40 uppercase tracking-wider mb-2">Asset Type</div>
@@ -428,12 +471,21 @@ export default function App() {
                           const sN = Number(pos.shortCapital || 0) * Number(pos.shortLeverage || 1);
                           const { net, daily } = calcYield(pos.longApr, pos.shortApr, lN, sN);
                           const isRefreshing = loadingAprId === pos.id;
+                          
+                          // VÉRIFICATION : L'APR ne peut être rafraîchi que si le pair est une crypto listée sur Hyperliquid (notre seule source API actuelle)
+                          const canRefresh = PAIRS_BY_PLATFORM.hyperliquid.crypto.includes(pos.pair) && pos.pairCategory === 'crypto';
+
                           return (
                             <tr key={pos.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                               <td className="p-3 font-mono font-bold">
                                 {pos.pair}
-                                {pos.pair && PAIRS_BY_PLATFORM.hyperliquid.crypto.includes(pos.pair) && ( // Seulement rafraîchir pour les pairs Hyperliquid
-                                    <button onClick={() => updatePositionApr(pos.id, pos.pair)} disabled={isRefreshing} className={`ml-2 p-1 rounded-full text-white/30 hover:text-emerald-400 transition-all ${isRefreshing ? 'animate-spin' : ''}`} title="Refresh APR">
+                                {canRefresh && (
+                                    <button 
+                                        onClick={() => updatePositionApr(pos.id, pos.pair)} 
+                                        disabled={isRefreshing} 
+                                        className={`ml-2 p-1 rounded-full text-white/30 hover:text-emerald-400 transition-all ${isRefreshing ? 'animate-spin' : ''}`} 
+                                        title="Rafraîchir APR (via Hyperliquid API)"
+                                    >
                                         <Icons.Refresh />
                                     </button>
                                 )}
@@ -450,6 +502,9 @@ export default function App() {
                       </tbody>
                     </table>
                   </div>
+                  <p className='text-xs text-white/30'>
+                    **Note Funding:** Les taux d'APR sont actuellement récupérés uniquement via l'API publique d'Hyperliquid. Ils ne sont pas disponibles pour les paires Forex, Stocks, ou les plateformes sans API publique connue pour les taux (comme Lighter).
+                  </p>
                 </div>
               </div>
             </div>
@@ -515,16 +570,16 @@ export default function App() {
           {/* PREDICTIONS */}
           {activeTab === 'predictions' && (
             <div className="space-y-6">
-              <div className="text-sm text-white/40 mb-4">📊 Mets à jour tes stats manuellement ou clique sur le bouton de rafraîchissement. **Polymarket est mis à jour en direct (simulé).**</div>
+              <div className="text-sm text-white/40 mb-4">📊 Mets à jour tes stats manuellement ou clique sur le bouton de rafraîchissement. Les données affichées pour Polymarket et Myriad sont **simulées** en attendant la connexion à une API publique.</div>
               <button onClick={fetchPredictionStats} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 mb-4">
-                <Icons.Refresh /> Rafraîchir les stats automatiques
+                <Icons.Refresh /> Rafraîchir les stats auto.
               </button>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {PREDICTION_PLATFORMS.map(platform => {
                   const stats = predictionStats[platform.id] || {};
                   const isEditing = editingPrediction === platform.id;
                   
-                  // Définir la section du titre comme un lien
+                  // Composant pour le lien cliquable sur le titre
                   const TitleLink = () => (
                     <a href={platform.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 font-bold hover:opacity-80 transition-opacity">
                         <img src={platform.logo} alt="" className="w-6 h-6 rounded-lg" />
@@ -557,14 +612,12 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            {platform.profileUrl && (
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-white/40">Rank (All Time)</span>
-                                    <span className="text-xl font-bold" style={{ color: platform.color }}>{stats.rank ? `#${stats.rank}` : '-'}</span>
-                                </div>
-                            )}
-                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">PnL</span><span className={`text-lg font-bold ${(stats.pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.pnl != null ? `$${stats.pnl.toLocaleString()}` : '-'}</span></div>
-                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">Positions</span><span className="text-lg font-bold text-blue-400">{stats.positions ?? '-'}</span></div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-xs text-white/40">Rank (All Time)</span>
+                                <span className="text-xl font-bold" style={{ color: platform.color }}>{stats.rank ? `#${stats.rank}` : '-'}</span>
+                            </div>
+                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">PnL (USD)</span><span className={`text-lg font-bold ${(stats.pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.pnl != null ? `$${stats.pnl.toLocaleString()}` : '-'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">{platform.id === 'myriad' ? 'Points/Volume' : 'Positions'}</span><span className="text-lg font-bold text-blue-400">{stats.positions ?? '-'}</span></div>
                             <div className="flex justify-between items-center"><span className="text-xs text-white/40">Volume</span><span className="text-lg font-bold text-yellow-400">{stats.volume != null ? `$${stats.volume.toLocaleString()}` : '-'}</span></div>
                           </div>
                         )}
