@@ -16,7 +16,7 @@ const Icons = {
   Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>,
 };
 
-// ==================== FUNDING PLATFORMS (Updated) ====================
+// ==================== FUNDING PLATFORMS ====================
 const FUNDING_PLATFORMS = [
   { id: 'hyperliquid', name: 'Hyperliquid', url: 'https://app.hyperliquid.xyz/trade', color: '#4ade80', logo: 'https://www.google.com/s2/favicons?domain=hyperliquid.xyz&sz=128' },
   { id: 'vest', name: 'Vest', url: 'https://vest.exchange/', color: '#a78bfa', logo: 'https://www.google.com/s2/favicons?domain=vest.exchange&sz=128' },
@@ -27,7 +27,7 @@ const FUNDING_PLATFORMS = [
   { id: 'xyz', name: 'XYZ', url: 'https://app.trade.xyz/trade', color: '#facc15', logo: 'https://www.google.com/s2/favicons?domain=trade.xyz&sz=128' },
 ];
 
-// ==================== PAIRS BY PLATFORM (Updated) ====================
+// ==================== PAIRS BY PLATFORM ====================
 const PAIRS_BY_PLATFORM = {
   hyperliquid: {
     crypto: ['BTC', 'ETH', 'SOL', 'ARB', 'OP', 'AVAX', 'DOGE', 'MATIC', 'LINK', 'UNI', 'AAVE', 'LDO', 'MKR', 'CRV', 'SNX', 'SUI', 'APT', 'INJ', 'SEI', 'TIA', 'STRK', 'JUP', 'WIF', 'PEPE', 'BONK', 'NEAR', 'FTM', 'ATOM', 'DOT', 'ADA', 'XRP', 'LTC', 'HYPE', 'RENDER', 'TAO', 'WLD', 'PYTH', 'JTO', 'ONDO'],
@@ -64,13 +64,11 @@ const PREDICTION_PLATFORMS = [
   { id: 'opinion', name: 'Opinion', url: 'https://app.opinion.trade/profile', profileUrl: null, color: '#f97316', twitter: 'OpinionLabsXYZ', logo: 'https://www.google.com/s2/favicons?domain=opinion.trade&sz=128' },
 ];
 
-// ... (Rest of constants: STOCK_LOGOS, SECTORS, DEFAULT_WATCHLIST, TREEMAP functions)
-
 // ==================== STOCKS ====================
 const STOCK_LOGOS = { NVDA: 'nvidia.com', AAPL: 'apple.com', MSFT: 'microsoft.com', GOOGL: 'google.com', META: 'meta.com', AMZN: 'amazon.com', TSLA: 'tesla.com', AMD: 'amd.com', INTC: 'intel.com', ASML: 'asml.com', TSM: 'tsmc.com', CCJ: 'cameco.com', URA: 'globalxetfs.com', URNM: 'sprott.com', NXE: 'nexgenenergy.ca', DNN: 'denisonmines.com', RKLB: 'rocketlabusa.com', LUNR: 'intuitivemachines.com', PLTR: 'palantir.com', LMT: 'lockheedmartin.com', RTX: 'rtx.com', EWJ: 'ishares.com', FCX: 'fcx.com' };
 const getStockLogo = (s) => STOCK_LOGOS[s] ? `https://logo.clearbit.com/${STOCK_LOGOS[s]}` : `https://logo.clearbit.com/${s.toLowerCase()}.com`;
 
-const SECTORS = ['All', 'Uranium', 'Semiconductors', 'Space', 'Defense', 'Japan', 'Copper', 'Other'];
+const DEFAULT_SECTORS = ['All', 'Uranium', 'Semiconductors', 'Space', 'Defense', 'Japan', 'Copper', 'Other'];
 const DEFAULT_WATCHLIST = [
   { symbol: 'CCJ', group: 'Uranium', weight: 50 }, { symbol: 'URA', group: 'Uranium', weight: 40 }, { symbol: 'URNM', group: 'Uranium', weight: 30 }, { symbol: 'NXE', group: 'Uranium', weight: 25 },
   { symbol: 'NVDA', group: 'Semiconductors', weight: 100 }, { symbol: 'ASML', group: 'Semiconductors', weight: 60 }, { symbol: 'TSM', group: 'Semiconductors', weight: 70 }, { symbol: 'AMD', group: 'Semiconductors', weight: 50 },
@@ -108,81 +106,11 @@ const getColor = (c) => { const v = parseFloat(c) || 0; return v > 5 ? '#16a34a'
 
 // ==================== FETCH HOOKS ====================
 
-// Fonction pour récupérer les taux réels d'Hyperliquid (Crypto)
-const fetchHyperliquidRates = async () => {
-    try {
-        const res = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs' }) });
-        const data = await res.json();
-        const rates = {};
-        if (data?.[0]?.universe && data?.[1]) {
-            data[1].forEach((ctx, i) => { 
-                const sym = data[0].universe[i]?.name; 
-                if (sym) rates[sym] = parseFloat(ctx.funding || 0) * 3 * 365 * 100; 
-            });
-        }
-        return rates;
-    } catch (e) {
-        console.error("Erreur Hyperliquid API:", e);
-        return {};
-    }
-};
-
-// Fonction pour simuler les taux Vest (Forex/Stocks)
-const fetchVestRatesSimulated = async () => {
-    // Dans une application réelle, ceci serait remplacé par une API Vest Markets
-    await new Promise(resolve => setTimeout(resolve, 100)); // Petite latence simulée
-    return {
-        // Forex
-        'EUR/USD': 0.85, 'GBP/USD': 0.50, 'USD/JPY': -1.25,
-        // Stocks (simulé)
-        'AAPL': 1.10, 'MSFT': 0.95, 'NVDA': 2.50, 'TSLA': -1.50,
-    };
-};
-
-// Fonction pour simuler les taux Ostium (Commodities/Indices)
-const fetchOstiumRatesSimulated = async () => {
-    // Dans une application réelle, ceci serait remplacé par une API Ostium
-    await new Promise(resolve => setTimeout(resolve, 100)); // Petite latence simulée
-    return {
-        // Commodities
-        'XAU/USD': -3.20, 'WTI': 0.60,
-        // Indices
-        'SPX': 1.15, 'NDX': 0.95,
-    };
-};
+// L'adresse IP de votre VPS OVH pour le Proxy Node.js
+const API_URL = 'http://51.38.238.191:3000'; 
 
 
-// Simulates fetching Prediction Stats from a hypothetical public API
-const useFetchPredictionStats = (setPredictionStats) => {
-  const fetchStats = useCallback(async () => {
-    // --- SIMULATION API AVEC VOS DONNÉES EN DIRECT ---
-    await new Promise(resolve => setTimeout(resolve, 500)); 
-    const simulatedData = {
-      // Burlakinho (Polymarket)
-      polymarket: { rank: 45, pnl: 21500, positions: 68, volume: 450000 }, 
-      // DABOSS (Myriad) - Stats simulées basées sur l'image fournie
-      myriad: { rank: 862, pnl: 4, positions: 14, volume: 45400 }, 
-      myriadbnb: { rank: 3, pnl: 12000, positions: 9, volume: 60000 },
-      limitless: { rank: 18, pnl: 2500, positions: 32, volume: 120000 },
-      xomarket: { rank: 5, pnl: 15000, positions: 18, volume: 250000 },
-    };
-    // --------------------------
-    setPredictionStats(prev => {
-        const manualStats = Object.keys(prev).reduce((acc, key) => {
-            if (!simulatedData[key]) {
-                 acc[key] = prev[key];
-            }
-            return acc;
-        }, {});
-        return {...manualStats, ...simulatedData};
-    });
-  }, [setPredictionStats]);
-
-  return fetchStats;
-};
-
-
-// Custom Platform Dropdown Component (for better UI consistency)
+// Custom Platform Dropdown Component (pour l'UI)
 const PlatformSelect = ({ platforms, selectedId, onChange, colorClass, label }) => {
   const [isOpen, setIsOpen] = useState(false);
   const selected = platforms.find(p => p.id === selectedId);
@@ -224,6 +152,8 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('funding');
   
   // Stocks
+  const [sectors, setSectors] = useState(() => JSON.parse(localStorage.getItem('golazo_sectors') || 'null') || DEFAULT_SECTORS);
+  const [newSector, setNewSector] = useState('');
   const [watchlist, setWatchlist] = useState(() => JSON.parse(localStorage.getItem('golazo_watchlist') || 'null') || DEFAULT_WATCHLIST);
   const [stockData, setStockData] = useState({});
   const [loadingStocks, setLoadingStocks] = useState(false);
@@ -234,47 +164,60 @@ export default function App() {
 
   // Funding
   const [positions, setPositions] = useState(() => JSON.parse(localStorage.getItem('golazo_positions') || '[]'));
-  const [longPlatform, setLongPlatform] = useState('hyperliquid');
-  const [shortPlatform, setShortPlatform] = useState('vest');
+  const [longPlatform, setLongPlatform] = useState('paradex');
+  const [shortPlatform, setShortPlatform] = useState('lighter');
   const [pairCategory, setPairCategory] = useState('crypto');
   const [selectedPair, setSelectedPair] = useState(null);
-  const [newPos, setNewPos] = useState({ longCapital: '', shortCapital: '', longLeverage: '10', shortLeverage: '10', longApr: '', shortApr: '' });
+  const [newPos, setNewPos] = useState({ longCapital: '10', shortCapital: '10', longLeverage: '10', shortLeverage: '10', longApr: '', shortApr: '' });
   const [fundingRates, setFundingRates] = useState({});
   const [loadingAprId, setLoadingAprId] = useState(null); 
 
   // Predictions
   const [predictionStats, setPredictionStats] = useState(() => JSON.parse(localStorage.getItem('golazo_predictions') || 'null') || {});
   const [editingPrediction, setEditingPrediction] = useState(null);
-  const fetchPredictionStats = useFetchPredictionStats(setPredictionStats); 
+
+
+  // *******************************************************************
+  // 1. NOUVELLE FONCTION DE RÉCUPÉRATION DES DONNÉES UNIFIÉE (PROXY)
+  // *******************************************************************
+  const fetchDashboardData = useCallback(async () => {
+    try {
+        // Appelle le serveur proxy Node.js pour obtenir TOUTES les données (taux et stats)
+        const response = await fetch(`${API_URL}/api/dashboard-data`); 
+        
+        if (!response.ok) {
+            console.error(`Erreur réseau du proxy: ${response.status}`);
+            return {};
+        }
+
+        const data = await response.json();
+
+        // Met à jour les taux de financement
+        setFundingRates(data.fundingRates || {});
+        
+        // Met à jour les statistiques de prédiction (en conservant les stats manuelles existantes)
+        setPredictionStats(prev => ({ ...prev, ...(data.predictionStats || {}) }));
+        
+        return data.fundingRates || {};
+
+    } catch (e) {
+        console.error("Erreur de connexion au proxy ou traitement des données:", e);
+        return {}; 
+    }
+  }, [setFundingRates, setPredictionStats]); 
 
   // Persistence
   useEffect(() => { localStorage.setItem('golazo_watchlist', JSON.stringify(watchlist)); }, [watchlist]);
   useEffect(() => { localStorage.setItem('golazo_positions', JSON.stringify(positions)); }, [positions]);
   useEffect(() => { localStorage.setItem('golazo_predictions', JSON.stringify(predictionStats)); }, [predictionStats]);
+  useEffect(() => { localStorage.setItem('golazo_sectors', JSON.stringify(sectors)); }, [sectors]);
 
-  // Combined Funding Rates Fetcher
-  const fetchFundingRates = useCallback(async () => {
-    // Fetch all rates (real + simulated) concurrently
-    const [hyperliquidRates, vestSimulated, ostiumSimulated] = await Promise.all([
-        fetchHyperliquidRates(),
-        fetchVestRatesSimulated(),
-        fetchOstiumRatesSimulated(),
-    ]);
 
-    const combinedRates = {
-        ...hyperliquidRates,
-        ...vestSimulated,
-        ...ostiumSimulated,
-    };
-    
-    setFundingRates(combinedRates);
-    return combinedRates;
-  }, []);
-  
-  // Update APR for a specific position 
+  // 2. LOGIQUE DE RAFFRAICHISSEMENT APR (Maintenant alimentée par le proxy)
   const updatePositionApr = useCallback(async (id, pair) => {
     setLoadingAprId(id);
-    const rates = await fetchFundingRates();
+    // On appelle la fonction unifiée pour rafraîchir TOUS les taux
+    const rates = await fetchDashboardData(); 
     const newRate = rates[pair];
 
     if (newRate !== undefined) {
@@ -283,7 +226,6 @@ export default function App() {
                 p.id === id 
                 ? { 
                     ...p, 
-                    // Mise à jour de l'APR Long et Short avec le nouveau taux agrégé
                     longApr: newRate.toFixed(2), 
                     shortApr: newRate.toFixed(2) 
                   }
@@ -292,9 +234,9 @@ export default function App() {
         );
     }
     setLoadingAprId(null);
-  }, [fetchFundingRates]);
+  }, [fetchDashboardData]);
 
-  // Fetch stocks
+  // Fetch stocks (non modifié, utilise toujours l'API Yahoo)
   const fetchStockData = useCallback(async () => {
     if (!watchlist.length) return;
     setLoadingStocks(true);
@@ -311,20 +253,22 @@ export default function App() {
     setLoadingStocks(false);
   }, [watchlist]);
 
-  // Initial and recurring data fetching
+
+  // *******************************************************************
+  // 3. MISE À JOUR DU useEffect PRINCIPAL (Intervalle de rafraîchissement)
+  // *******************************************************************
   useEffect(() => { 
     fetchStockData(); 
-    fetchFundingRates(); 
-    fetchPredictionStats();
+    fetchDashboardData(); 
     
     const i1 = setInterval(fetchStockData, 60000); 
-    const i2 = setInterval(fetchFundingRates, 30000); 
+    const i2 = setInterval(fetchDashboardData, 30000); // Rafraîchit les taux de funding et les stats predictions
     
     return () => { 
       clearInterval(i1); 
       clearInterval(i2); 
     }; 
-  }, [fetchStockData, fetchFundingRates, fetchPredictionStats]);
+  }, [fetchStockData, fetchDashboardData]);
 
   // Helpers
   const getAvailablePairs = () => {
@@ -346,15 +290,28 @@ export default function App() {
 
   const addPosition = () => {
     if (!selectedPair) return;
-    setPositions([...positions, { id: Date.now(), pair: selectedPair, longPlatform, shortPlatform, ...newPos }]);
-    setNewPos({ longCapital: '', shortCapital: '', longLeverage: '10', shortLeverage: '10', longApr: '', shortApr: '' });
+    setPositions([...positions, { id: Date.now(), pair: selectedPair, longPlatform, shortPlatform, ...newPos, pairCategory }]);
+    setNewPos({ longCapital: '10', shortCapital: '10', longLeverage: '10', shortLeverage: '10', longApr: '', shortApr: '' });
     setSelectedPair(null);
   };
 
   const addStock = () => {
-    if (!newStock.symbol) return;
+    if (!newStock.symbol || !newStock.group) return;
     const sym = newStock.symbol.toUpperCase().trim();
     if (!watchlist.find(s => s.symbol === sym)) { setWatchlist([...watchlist, { symbol: sym, group: newStock.group, weight: 30 }]); setNewStock({ symbol: '', group: 'Other' }); setTimeout(fetchStockData, 500); }
+  };
+  
+  const addSector = () => {
+    const newS = newSector.trim();
+    if (newS && !sectors.includes(newS)) {
+        setSectors([...sectors, newS]);
+        setNewSector('');
+    }
+  };
+  
+  const removeSector = (s) => {
+    setSectors(sectors.filter(sec => sec !== s));
+    setWatchlist(watchlist.map(item => item.group === s ? {...item, group: 'Other'} : item));
   };
 
   const calcYield = (lA, sA, lN, sN) => { const net = -parseFloat(lA || 0) + parseFloat(sA || 0); return { net, daily: ((lN + sN) / 2 * net / 100) / 365 }; };
@@ -516,7 +473,6 @@ export default function App() {
                           const { net, daily } = calcYield(pos.longApr, pos.shortApr, lN, sN);
                           const isRefreshing = loadingAprId === pos.id;
                           
-                          // VÉRIFICATION : Le rafraîchissement est toujours disponible car nous avons des taux agrégés (simulés ou réels)
                           const canRefresh = true;
 
                           return (
@@ -547,7 +503,7 @@ export default function App() {
                     </table>
                   </div>
                   <p className='text-xs text-white/30'>
-                    **Note Funding:** Les taux d'APR sont récupérés en direct pour les cryptos (Hyperliquid) et sont des **valeurs simulées** pour le Forex, les Stocks et les Commodités, en l'absence d'une API publique front-end directe pour Vest et Ostium.
+                    **Note Funding:** Les taux d'APR proviennent de votre serveur proxy (51.38.238.191:3000) et sont agrégés (données réelles + simulées).
                   </p>
                 </div>
               </div>
@@ -557,16 +513,29 @@ export default function App() {
           {/* STOCKS */}
           {activeTab === 'stocks' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-2">
                   <button onClick={fetchStockData} disabled={loadingStocks} className={`p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 ${loadingStocks ? 'animate-spin' : ''}`}><Icons.Refresh /></button>
                   <div className="flex gap-1 bg-white/[0.02] rounded-xl p-1 border border-white/[0.06]">
-                    {SECTORS.map(s => <button key={s} onClick={() => setSectorFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${sectorFilter === s ? 'bg-emerald-500 text-black' : 'hover:bg-white/10'}`}>{s}</button>)}
+                    {sectors.map(s => <button key={s} onClick={() => setSectorFilter(s)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${sectorFilter === s ? 'bg-emerald-500 text-black' : 'hover:bg-white/10'}`}>{s}</button>)}
                   </div>
                 </div>
+                
                 <div className="flex items-center gap-2">
+                    <div className="flex flex-col space-y-2">
+                        <div className="flex items-center gap-2">
+                            <input placeholder="Ajouter Secteur" value={newSector} onChange={e => setNewSector(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSector()} className="w-32 bg-white/[0.05] border border-white/[0.08] rounded-lg px-3 py-1 text-sm focus:outline-none" />
+                            <button onClick={addSector} className="p-1 bg-blue-500 rounded-lg hover:bg-blue-600"><Icons.Plus /></button>
+                        </div>
+                        {newSector && <div className="text-[10px] text-white/50">Tapez Entrée pour ajouter.</div>}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-2 md:mt-0">
                   <input placeholder="TICKER" value={newStock.symbol} onChange={e => setNewStock({...newStock, symbol: e.target.value.toUpperCase()})} onKeyDown={e => e.key === 'Enter' && addStock()} className="w-20 bg-white/[0.05] border border-white/[0.08] rounded-lg px-3 py-2 text-sm font-mono focus:outline-none" />
-                  <select value={newStock.group} onChange={e => setNewStock({...newStock, group: e.target.value})} className="bg-white/[0.05] border border-white/[0.08] rounded-lg px-3 py-2 text-sm">{SECTORS.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}</select>
+                  <select value={newStock.group} onChange={e => setNewStock({...newStock, group: e.target.value})} className="bg-white/[0.05] border border-white/[0.08] rounded-lg px-3 py-2 text-sm">
+                    {sectors.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                   <button onClick={addStock} className="p-2 bg-emerald-500 rounded-lg hover:bg-emerald-600"><Icons.Plus /></button>
                 </div>
               </div>
@@ -601,6 +570,8 @@ export default function App() {
                       {stockData[selectedStock] && <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${stockData[selectedStock].change >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>{stockData[selectedStock].change >= 0 ? '+' : ''}{stockData[selectedStock].change?.toFixed(2)}%</span>}
                     </div>
                     <div className="flex items-center gap-2">
+                      <a href={`https://finance.yahoo.com/quote/${selectedStock}`} target="_blank" rel="noopener noreferrer" className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10">Bilan (Yahoo) <Icons.External /></a>
+                      <a href={`https://www.tradingview.com/symbols/${selectedStock}`} target="_blank" rel="noopener noreferrer" className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white/5 hover:bg-white/10">Analyse (TV) <Icons.External /></a>
                       {['1', '5', 'D', 'W', 'M'].map(tf => <button key={tf} onClick={() => setTimeframe(tf)} className={`px-2.5 py-1 rounded-lg text-xs font-medium ${timeframe === tf ? 'bg-emerald-500 text-black' : 'bg-white/5 hover:bg-white/10'}`}>{tf}</button>)}
                       <button onClick={() => setSelectedStock(null)} className="p-1.5 hover:bg-white/10 rounded-lg ml-2"><Icons.X /></button>
                     </div>
@@ -608,22 +579,32 @@ export default function App() {
                   <iframe src={`https://www.tradingview.com/widgetembed/?symbol=${selectedStock}&interval=${timeframe}&theme=dark&style=3&hide_top_toolbar=1&hide_legend=1&save_image=0&hide_volume=1`} className="w-full h-[350px] border-0" title="Chart" />
                 </div>
               )}
+               <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.06]">
+                    <div className="text-sm text-white/40 mb-2">Gérer les Secteurs</div>
+                    <div className="flex flex-wrap gap-2">
+                        {sectors.filter(s => s !== 'All' && s !== 'Other').map(s => (
+                            <div key={s} className="flex items-center bg-white/10 rounded-full px-3 py-1 text-xs">
+                                {s}
+                                <button onClick={() => removeSector(s)} className="ml-2 text-white/50 hover:text-red-400"><Icons.X /></button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
           )}
 
           {/* PREDICTIONS */}
           {activeTab === 'predictions' && (
             <div className="space-y-6">
-              <div className="text-sm text-white/40 mb-4">📊 Mets à jour tes stats manuellement ou clique sur le bouton de rafraîchissement. Les données affichées pour Polymarket et Myriad sont **simulées** en attendant la connexion à une API publique.</div>
-              <button onClick={fetchPredictionStats} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 mb-4">
-                <Icons.Refresh /> Rafraîchir les stats auto.
+              <div className="text-sm text-white/40 mb-4">📊 Les données proviennent de votre serveur proxy (51.38.238.191:3000).</div>
+              <button onClick={fetchDashboardData} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 mb-4">
+                <Icons.Refresh /> Rafraîchir les stats
               </button>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {PREDICTION_PLATFORMS.map(platform => {
                   const stats = predictionStats[platform.id] || {};
                   const isEditing = editingPrediction === platform.id;
                   
-                  // Composant pour le lien cliquable sur le titre
                   const TitleLink = () => (
                     <a href={platform.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 font-bold hover:opacity-80 transition-opacity">
                         <img src={platform.logo} alt="" className="w-6 h-6 rounded-lg" />
