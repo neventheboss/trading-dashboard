@@ -63,7 +63,7 @@ const PAIRS_BY_PLATFORM = {
 const PREDICTION_PLATFORMS = [
   { id: 'polymarket', name: 'Polymarket', url: 'https://polymarket.com/', profileUrl: 'https://polymarket.com/@neventheboss', color: '#6366f1', twitter: 'Polymarket', logo: 'https://www.google.com/s2/favicons?domain=polymarket.com&sz=128' },
   { id: 'myriad', name: 'Myriad', url: 'https://myriad.markets/earn', profileUrl: 'https://myriad.markets/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#8b5cf6', twitter: 'MyriadMarkets', logo: 'https://www.google.com/s2/favicons?domain=myriad.markets&sz=128' },
-  { id: 'myriadbnb', name: 'Myriad BNB', url: 'https://bnb.myriadprotocol.com/markets', profileUrl: 'https://myriad.markets/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#f0b90b', twitter: 'MyriadMarkets', logo: 'https://www.google.com/s2/favicons?domain=myriad.markets&sz=128' },
+  { id: 'myriadbnb', name: 'Myriad BNB', url: 'https://bnb.myriadprotocol.com/markets', profileUrl: 'https://bnb.myriadprotocol.com/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#f0b90b', twitter: 'MyriadMarkets', logo: 'https://www.google.com/s2/favicons?domain=myriad.markets&sz=128' },
   { id: 'limitless', name: 'Limitless', url: 'https://limitless.exchange/advanced', profileUrl: 'https://limitless.exchange/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#ec4899', twitter: 'trylimitless', logo: 'https://www.google.com/s2/favicons?domain=limitless.exchange&sz=128' },
   { id: 'xomarket', name: 'XO Market', url: 'https://beta.xo.market/markets', profileUrl: 'https://beta.xo.market/profile/neventheboss', color: '#06b6d4', twitter: 'xodotmarket', logo: 'https://www.google.com/s2/favicons?domain=xo.market&sz=128' },
   { id: 'predictbase', name: 'PredictBase', url: 'https://predictbase.app/', profileUrl: null, color: '#14b8a6', twitter: 'PredictBase', logo: 'https://www.google.com/s2/favicons?domain=predictbase.app&sz=128' },
@@ -109,6 +109,32 @@ const calculateTreemap = (items, w, h) => {
 
 const getColor = (c) => { const v = parseFloat(c) || 0; return v > 5 ? '#16a34a' : v > 2 ? '#15803d' : v > 0 ? '#166534' : v > -2 ? '#7f1d1d' : v > -5 ? '#991b1b' : '#b91c1c'; };
 
+// ==================== FETCH HOOKS ====================
+
+// Simulates fetching Prediction Stats from a hypothetical public API
+// NOTE: Replace this with actual API calls to Polymarket, Myriad, etc.
+const useFetchPredictionStats = (setPredictionStats) => {
+  const fetchStats = useCallback(async () => {
+    // --- SIMULATED API CALL ---
+    await new Promise(resolve => setTimeout(resolve, 500)); 
+    const simulatedData = {
+      polymarket: { rank: 12, pnl: 4500, positions: 24, volume: 150000 },
+      myriad: { rank: 8, pnl: 8900, positions: 14, volume: 85000 },
+      myriadbnb: { rank: 3, pnl: 12000, positions: 9, volume: 60000 },
+      limitless: { rank: 18, pnl: 2500, positions: 32, volume: 120000 },
+      xomarket: { rank: 5, pnl: 15000, positions: 18, volume: 250000 },
+      // Other platforms would default to manual or null
+    };
+    // --------------------------
+    setPredictionStats(prev => {
+        const manualStats = Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: { ...prev[key], volume: prev[key].volume } }), {});
+        return {...manualStats, ...simulatedData};
+    });
+  }, [setPredictionStats]);
+
+  return fetchStats;
+};
+
 // ==================== MAIN ====================
 export default function App() {
   const [activeTab, setActiveTab] = useState('funding');
@@ -134,6 +160,7 @@ export default function App() {
   // Predictions
   const [predictionStats, setPredictionStats] = useState(() => JSON.parse(localStorage.getItem('golazo_predictions') || 'null') || {});
   const [editingPrediction, setEditingPrediction] = useState(null);
+  const fetchPredictionStats = useFetchPredictionStats(setPredictionStats); // Utilisez le nouveau hook
 
   // Persistence
   useEffect(() => { localStorage.setItem('golazo_watchlist', JSON.stringify(watchlist)); }, [watchlist]);
@@ -170,7 +197,16 @@ export default function App() {
     } catch (e) { console.error(e); }
   }, []);
 
-  useEffect(() => { fetchStockData(); fetchFundingRates(); const i1 = setInterval(fetchStockData, 60000); const i2 = setInterval(fetchFundingRates, 30000); return () => { clearInterval(i1); clearInterval(i2); }; }, [fetchStockData, fetchFundingRates]);
+  // Initial and recurring data fetching
+  useEffect(() => { 
+    fetchStockData(); 
+    fetchFundingRates(); 
+    fetchPredictionStats(); // Appel initial des stats
+    const i1 = setInterval(fetchStockData, 60000); 
+    const i2 = setInterval(fetchFundingRates, 30000); 
+    // On peut aussi ajouter un intervalle pour fetchPredictionStats ici si l'API est mise en place
+    return () => { clearInterval(i1); clearInterval(i2); }; 
+  }, [fetchStockData, fetchFundingRates, fetchPredictionStats]);
 
   // Helpers
   const getAvailablePairs = () => {
@@ -426,11 +462,16 @@ export default function App() {
           {/* PREDICTIONS */}
           {activeTab === 'predictions' && (
             <div className="space-y-6">
-              <div className="text-sm text-white/40 mb-4">📊 Mets à jour tes stats depuis chaque plateforme (All Time). Clique sur ✏️ pour modifier.</div>
+              <div className="text-sm text-white/40 mb-4">📊 Mets à jour tes stats manuellement ou clique sur le bouton de rafraîchissement (nécessite une configuration API pour l'automatisation).</div>
+              <button onClick={fetchPredictionStats} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 mb-4">
+                <Icons.Refresh /> Rafraîchir les stats auto.
+              </button>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {PREDICTION_PLATFORMS.map(platform => {
                   const stats = predictionStats[platform.id] || {};
                   const isEditing = editingPrediction === platform.id;
+                  const showProfile = platform.profileUrl && ['polymarket', 'myriad', 'myriadbnb', 'limitless', 'xomarket'].includes(platform.id); // Affiche Profil seulement si profileUrl existe et c'est une plateforme où le rang est important
+                  
                   return (
                     <div key={platform.id} className="bg-white/[0.02] rounded-2xl border border-white/[0.06] overflow-hidden">
                       <div className="h-14 relative flex items-center justify-between px-4" style={{ background: `linear-gradient(135deg, ${platform.color}40, ${platform.color}10)` }}>
@@ -440,23 +481,35 @@ export default function App() {
                       <div className="p-4">
                         {isEditing ? (
                           <div className="space-y-2">
-                            {['rank', 'pnl', 'positions'].map(f => (
+                            {['rank', 'pnl', 'positions', 'volume'].map(f => ( // Ajout de volume pour la saisie manuelle
                               <div key={f} className="flex items-center gap-2">
                                 <span className="text-xs text-white/40 w-16 capitalize">{f === 'pnl' ? 'PnL $' : f}</span>
-                                <input type="number" placeholder={f === 'rank' ? '#' : '0'} value={stats[f] || ''} onChange={e => setPredictionStats({...predictionStats, [platform.id]: {...stats, [f]: e.target.value ? Number(e.target.value) : null}})} className="flex-1 bg-black/30 rounded-lg px-2 py-1.5 text-sm focus:outline-none border border-white/10" />
+                                <input 
+                                    type="number" 
+                                    placeholder={f === 'rank' ? '#' : '0'} 
+                                    value={stats[f] || ''} 
+                                    onChange={e => setPredictionStats({...predictionStats, [platform.id]: {...stats, [f]: e.target.value ? Number(e.target.value) : null}})} 
+                                    className="flex-1 bg-black/30 rounded-lg px-2 py-1.5 text-sm focus:outline-none border border-white/10" 
+                                />
                               </div>
                             ))}
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">Rank (All Time)</span><span className="text-xl font-bold" style={{ color: platform.color }}>{stats.rank ? `#${stats.rank}` : '-'}</span></div>
+                            {showProfile && (
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs text-white/40">Rank (All Time)</span>
+                                    <span className="text-xl font-bold" style={{ color: platform.color }}>{stats.rank ? `#${stats.rank}` : '-'}</span>
+                                </div>
+                            )}
                             <div className="flex justify-between items-center"><span className="text-xs text-white/40">PnL</span><span className={`text-lg font-bold ${(stats.pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.pnl != null ? `$${stats.pnl.toLocaleString()}` : '-'}</span></div>
                             <div className="flex justify-between items-center"><span className="text-xs text-white/40">Positions</span><span className="text-lg font-bold text-blue-400">{stats.positions ?? '-'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">Volume</span><span className="text-lg font-bold text-yellow-400">{stats.volume != null ? `$${stats.volume.toLocaleString()}` : '-'}</span></div>
                           </div>
                         )}
                         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/[0.06]">
                           <a href={platform.url} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 rounded-xl text-center text-xs font-medium hover:opacity-90" style={{ backgroundColor: platform.color }}>Trade</a>
-                          {platform.profileUrl && <a href={platform.profileUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs">Profile</a>}
+                          {showProfile && <a href={platform.profileUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs">Profile</a>}
                           <a href={`https://twitter.com/${platform.twitter}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl bg-white/5 hover:bg-white/10"><Icons.Twitter /></a>
                         </div>
                       </div>
