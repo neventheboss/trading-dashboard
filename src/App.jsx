@@ -16,7 +16,7 @@ const Icons = {
   Check: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>,
 };
 
-// ==================== FUNDING PLATFORMS (Updated - Vertex, dYdX, GMX removed) ====================
+// ==================== FUNDING PLATFORMS (Updated) ====================
 const FUNDING_PLATFORMS = [
   { id: 'hyperliquid', name: 'Hyperliquid', url: 'https://app.hyperliquid.xyz/trade', color: '#4ade80', logo: 'https://www.google.com/s2/favicons?domain=hyperliquid.xyz&sz=128' },
   { id: 'vest', name: 'Vest', url: 'https://vest.exchange/', color: '#a78bfa', logo: 'https://www.google.com/s2/favicons?domain=vest.exchange&sz=128' },
@@ -27,7 +27,7 @@ const FUNDING_PLATFORMS = [
   { id: 'xyz', name: 'XYZ', url: 'https://app.trade.xyz/trade', color: '#facc15', logo: 'https://www.google.com/s2/favicons?domain=trade.xyz&sz=128' },
 ];
 
-// ==================== PAIRS BY PLATFORM (Updated - Vertex, dYdX, GMX removed) ====================
+// ==================== PAIRS BY PLATFORM (Updated) ====================
 const PAIRS_BY_PLATFORM = {
   hyperliquid: {
     crypto: ['BTC', 'ETH', 'SOL', 'ARB', 'OP', 'AVAX', 'DOGE', 'MATIC', 'LINK', 'UNI', 'AAVE', 'LDO', 'MKR', 'CRV', 'SNX', 'SUI', 'APT', 'INJ', 'SEI', 'TIA', 'STRK', 'JUP', 'WIF', 'PEPE', 'BONK', 'NEAR', 'FTM', 'ATOM', 'DOT', 'ADA', 'XRP', 'LTC', 'HYPE', 'RENDER', 'TAO', 'WLD', 'PYTH', 'JTO', 'ONDO'],
@@ -53,7 +53,7 @@ const PAIRS_BY_PLATFORM = {
   xyz: { crypto: ['BTC', 'ETH', 'SOL', 'HYPE'], forex: [], commodities: [], indices: [], stocks: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD', 'COIN', 'MSTR'] },
 };
 
-// ==================== PREDICTIONS (Updated - Myriad Profile) ====================
+// ==================== PREDICTIONS ====================
 const PREDICTION_PLATFORMS = [
   { id: 'polymarket', name: 'Polymarket', url: 'https://polymarket.com/', profileUrl: 'https://polymarket.com/@Burlakinho', color: '#6366f1', twitter: 'Polymarket', logo: 'https://www.google.com/s2/favicons?domain=polymarket.com&sz=128' },
   { id: 'myriad', name: 'Myriad', url: 'https://myriad.markets/earn', profileUrl: 'https://myriad.markets/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#8b5cf6', twitter: 'MyriadMarkets', logo: 'https://www.google.com/s2/favicons?domain=myriad.markets&sz=128' },
@@ -63,6 +63,8 @@ const PREDICTION_PLATFORMS = [
   { id: 'predictbase', name: 'PredictBase', url: 'https://predictbase.app/', profileUrl: null, color: '#14b8a6', twitter: 'PredictBase', logo: 'https://www.google.com/s2/favicons?domain=predictbase.app&sz=128' },
   { id: 'opinion', name: 'Opinion', url: 'https://app.opinion.trade/profile', profileUrl: null, color: '#f97316', twitter: 'OpinionLabsXYZ', logo: 'https://www.google.com/s2/favicons?domain=opinion.trade&sz=128' },
 ];
+
+// ... (Rest of constants: STOCK_LOGOS, SECTORS, DEFAULT_WATCHLIST, TREEMAP functions)
 
 // ==================== STOCKS ====================
 const STOCK_LOGOS = { NVDA: 'nvidia.com', AAPL: 'apple.com', MSFT: 'microsoft.com', GOOGL: 'google.com', META: 'meta.com', AMZN: 'amazon.com', TSLA: 'tesla.com', AMD: 'amd.com', INTC: 'intel.com', ASML: 'asml.com', TSM: 'tsmc.com', CCJ: 'cameco.com', URA: 'globalxetfs.com', URNM: 'sprott.com', NXE: 'nexgenenergy.ca', DNN: 'denisonmines.com', RKLB: 'rocketlabusa.com', LUNR: 'intuitivemachines.com', PLTR: 'palantir.com', LMT: 'lockheedmartin.com', RTX: 'rtx.com', EWJ: 'ishares.com', FCX: 'fcx.com' };
@@ -103,7 +105,52 @@ const calculateTreemap = (items, w, h) => {
 
 const getColor = (c) => { const v = parseFloat(c) || 0; return v > 5 ? '#16a34a' : v > 2 ? '#15803d' : v > 0 ? '#166534' : v > -2 ? '#7f1d1d' : v > -5 ? '#991b1b' : '#b91c1c'; };
 
+
 // ==================== FETCH HOOKS ====================
+
+// Fonction pour récupérer les taux réels d'Hyperliquid (Crypto)
+const fetchHyperliquidRates = async () => {
+    try {
+        const res = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs' }) });
+        const data = await res.json();
+        const rates = {};
+        if (data?.[0]?.universe && data?.[1]) {
+            data[1].forEach((ctx, i) => { 
+                const sym = data[0].universe[i]?.name; 
+                if (sym) rates[sym] = parseFloat(ctx.funding || 0) * 3 * 365 * 100; 
+            });
+        }
+        return rates;
+    } catch (e) {
+        console.error("Erreur Hyperliquid API:", e);
+        return {};
+    }
+};
+
+// Fonction pour simuler les taux Vest (Forex/Stocks)
+const fetchVestRatesSimulated = async () => {
+    // Dans une application réelle, ceci serait remplacé par une API Vest Markets
+    await new Promise(resolve => setTimeout(resolve, 100)); // Petite latence simulée
+    return {
+        // Forex
+        'EUR/USD': 0.85, 'GBP/USD': 0.50, 'USD/JPY': -1.25,
+        // Stocks (simulé)
+        'AAPL': 1.10, 'MSFT': 0.95, 'NVDA': 2.50, 'TSLA': -1.50,
+    };
+};
+
+// Fonction pour simuler les taux Ostium (Commodities/Indices)
+const fetchOstiumRatesSimulated = async () => {
+    // Dans une application réelle, ceci serait remplacé par une API Ostium
+    await new Promise(resolve => setTimeout(resolve, 100)); // Petite latence simulée
+    return {
+        // Commodities
+        'XAU/USD': -3.20, 'WTI': 0.60,
+        // Indices
+        'SPX': 1.15, 'NDX': 0.95,
+    };
+};
+
 
 // Simulates fetching Prediction Stats from a hypothetical public API
 const useFetchPredictionStats = (setPredictionStats) => {
@@ -148,7 +195,7 @@ const PlatformSelect = ({ platforms, selectedId, onChange, colorClass, label }) 
       >
         <div className="flex items-center gap-2">
             <img src={selected?.logo} alt="" className="w-4 h-4 rounded" />
-            <span className={`font-bold ${label === '⬆️ Long Platform' ? 'text-emerald-400' : 'text-red-400'}`}>{selected?.name}</span>
+            <span className={`font-bold ${label.includes('Long') ? 'text-emerald-400' : 'text-red-400'}`}>{selected?.name}</span>
         </div>
         <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"/></svg>
       </button>
@@ -205,29 +252,26 @@ export default function App() {
   useEffect(() => { localStorage.setItem('golazo_positions', JSON.stringify(positions)); }, [positions]);
   useEffect(() => { localStorage.setItem('golazo_predictions', JSON.stringify(predictionStats)); }, [predictionStats]);
 
-  // Fetch funding rates from Hyperliquid (as a common source for now)
+  // Combined Funding Rates Fetcher
   const fetchFundingRates = useCallback(async () => {
-    try {
-      const res = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs' }) });
-      const data = await res.json();
-      if (data?.[0]?.universe && data?.[1]) {
-        const rates = {};
-        data[1].forEach((ctx, i) => { 
-          const sym = data[0].universe[i]?.name; 
-          // Funding rate * 3 (every 8 hours) * 365 days * 100 to get APR %
-          if (sym) rates[sym] = parseFloat(ctx.funding || 0) * 3 * 365 * 100; 
-        });
-        setFundingRates(rates);
-        return rates; 
-      }
-    } catch (e) { 
-      console.error("Erreur de récupération des taux de financement:", e); 
-      return {};
-    }
-    return {};
+    // Fetch all rates (real + simulated) concurrently
+    const [hyperliquidRates, vestSimulated, ostiumSimulated] = await Promise.all([
+        fetchHyperliquidRates(),
+        fetchVestRatesSimulated(),
+        fetchOstiumRatesSimulated(),
+    ]);
+
+    const combinedRates = {
+        ...hyperliquidRates,
+        ...vestSimulated,
+        ...ostiumSimulated,
+    };
+    
+    setFundingRates(combinedRates);
+    return combinedRates;
   }, []);
   
-  // Update APR for a specific position (using Hyperliquid rates for now)
+  // Update APR for a specific position 
   const updatePositionApr = useCallback(async (id, pair) => {
     setLoadingAprId(id);
     const rates = await fetchFundingRates();
@@ -239,7 +283,7 @@ export default function App() {
                 p.id === id 
                 ? { 
                     ...p, 
-                    // Mise à jour de l'APR Long et Short avec le nouveau taux Hyperliquid
+                    // Mise à jour de l'APR Long et Short avec le nouveau taux agrégé
                     longApr: newRate.toFixed(2), 
                     shortApr: newRate.toFixed(2) 
                   }
@@ -472,8 +516,8 @@ export default function App() {
                           const { net, daily } = calcYield(pos.longApr, pos.shortApr, lN, sN);
                           const isRefreshing = loadingAprId === pos.id;
                           
-                          // VÉRIFICATION : L'APR ne peut être rafraîchi que si le pair est une crypto listée sur Hyperliquid (notre seule source API actuelle)
-                          const canRefresh = PAIRS_BY_PLATFORM.hyperliquid.crypto.includes(pos.pair) && pos.pairCategory === 'crypto';
+                          // VÉRIFICATION : Le rafraîchissement est toujours disponible car nous avons des taux agrégés (simulés ou réels)
+                          const canRefresh = true;
 
                           return (
                             <tr key={pos.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
@@ -484,7 +528,7 @@ export default function App() {
                                         onClick={() => updatePositionApr(pos.id, pos.pair)} 
                                         disabled={isRefreshing} 
                                         className={`ml-2 p-1 rounded-full text-white/30 hover:text-emerald-400 transition-all ${isRefreshing ? 'animate-spin' : ''}`} 
-                                        title="Rafraîchir APR (via Hyperliquid API)"
+                                        title="Rafraîchir APR"
                                     >
                                         <Icons.Refresh />
                                     </button>
@@ -503,7 +547,7 @@ export default function App() {
                     </table>
                   </div>
                   <p className='text-xs text-white/30'>
-                    **Note Funding:** Les taux d'APR sont actuellement récupérés uniquement via l'API publique d'Hyperliquid. Ils ne sont pas disponibles pour les paires Forex, Stocks, ou les plateformes sans API publique connue pour les taux (comme Lighter).
+                    **Note Funding:** Les taux d'APR sont récupérés en direct pour les cryptos (Hyperliquid) et sont des **valeurs simulées** pour le Forex, les Stocks et les Commodités, en l'absence d'une API publique front-end directe pour Vest et Ostium.
                   </p>
                 </div>
               </div>
@@ -617,7 +661,7 @@ export default function App() {
                                 <span className="text-xl font-bold" style={{ color: platform.color }}>{stats.rank ? `#${stats.rank}` : '-'}</span>
                             </div>
                             <div className="flex justify-between items-center"><span className="text-xs text-white/40">PnL (USD)</span><span className={`text-lg font-bold ${(stats.pnl || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{stats.pnl != null ? `$${stats.pnl.toLocaleString()}` : '-'}</span></div>
-                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">{platform.id === 'myriad' ? 'Points/Volume' : 'Positions'}</span><span className="text-lg font-bold text-blue-400">{stats.positions ?? '-'}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-xs text-white/40">Positions</span><span className="text-lg font-bold text-blue-400">{stats.positions ?? '-'}</span></div>
                             <div className="flex justify-between items-center"><span className="text-xs text-white/40">Volume</span><span className="text-lg font-bold text-yellow-400">{stats.volume != null ? `$${stats.volume.toLocaleString()}` : '-'}</span></div>
                           </div>
                         )}
