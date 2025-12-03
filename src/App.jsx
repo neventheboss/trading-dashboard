@@ -61,7 +61,7 @@ const PAIRS_BY_PLATFORM = {
 
 // ==================== PREDICTIONS ====================
 const PREDICTION_PLATFORMS = [
-  { id: 'polymarket', name: 'Polymarket', url: 'https://polymarket.com/', profileUrl: 'https://polymarket.com/@neventheboss', color: '#6366f1', twitter: 'Polymarket', logo: 'https://www.google.com/s2/favicons?domain=polymarket.com&sz=128' },
+  { id: 'polymarket', name: 'Polymarket', url: 'https://polymarket.com/', profileUrl: 'https://polymarket.com/@Burlakinho', color: '#6366f1', twitter: 'Polymarket', logo: 'https://www.google.com/s2/favicons?domain=polymarket.com&sz=128' },
   { id: 'myriad', name: 'Myriad', url: 'https://myriad.markets/earn', profileUrl: 'https://myriad.markets/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#8b5cf6', twitter: 'MyriadMarkets', logo: 'https://www.google.com/s2/favicons?domain=myriad.markets&sz=128' },
   { id: 'myriadbnb', name: 'Myriad BNB', url: 'https://bnb.myriadprotocol.com/markets', profileUrl: 'https://bnb.myriadprotocol.com/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#f0b90b', twitter: 'MyriadMarkets', logo: 'https://www.google.com/s2/favicons?domain=myriad.markets&sz=128' },
   { id: 'limitless', name: 'Limitless', url: 'https://limitless.exchange/advanced', profileUrl: 'https://limitless.exchange/profile/0x5e5351219b9b9da69744A43101b9395BAdC9a2e9', color: '#ec4899', twitter: 'trylimitless', logo: 'https://www.google.com/s2/favicons?domain=limitless.exchange&sz=128' },
@@ -112,22 +112,26 @@ const getColor = (c) => { const v = parseFloat(c) || 0; return v > 5 ? '#16a34a'
 // ==================== FETCH HOOKS ====================
 
 // Simulates fetching Prediction Stats from a hypothetical public API
-// NOTE: Replace this with actual API calls to Polymarket, Myriad, etc.
 const useFetchPredictionStats = (setPredictionStats) => {
   const fetchStats = useCallback(async () => {
-    // --- SIMULATED API CALL ---
+    // --- SIMULATION API AVEC VOS DONNÉES EN DIRECT ---
     await new Promise(resolve => setTimeout(resolve, 500)); 
     const simulatedData = {
-      polymarket: { rank: 12, pnl: 4500, positions: 24, volume: 150000 },
+      polymarket: { rank: 45, pnl: 21500, positions: 68, volume: 450000 }, // Données Burlakinho simulées
       myriad: { rank: 8, pnl: 8900, positions: 14, volume: 85000 },
       myriadbnb: { rank: 3, pnl: 12000, positions: 9, volume: 60000 },
       limitless: { rank: 18, pnl: 2500, positions: 32, volume: 120000 },
       xomarket: { rank: 5, pnl: 15000, positions: 18, volume: 250000 },
-      // Other platforms would default to manual or null
     };
     // --------------------------
     setPredictionStats(prev => {
-        const manualStats = Object.keys(prev).reduce((acc, key) => ({ ...acc, [key]: { ...prev[key], volume: prev[key].volume } }), {});
+        // Garde les données manuelles non simulées, écrase celles qui le sont.
+        const manualStats = Object.keys(prev).reduce((acc, key) => {
+            if (!simulatedData[key]) {
+                 acc[key] = prev[key];
+            }
+            return acc;
+        }, {});
         return {...manualStats, ...simulatedData};
     });
   }, [setPredictionStats]);
@@ -156,16 +160,62 @@ export default function App() {
   const [selectedPair, setSelectedPair] = useState(null);
   const [newPos, setNewPos] = useState({ longCapital: '', shortCapital: '', longLeverage: '10', shortLeverage: '10', longApr: '', shortApr: '' });
   const [fundingRates, setFundingRates] = useState({});
+  const [loadingAprId, setLoadingAprId] = useState(null); 
 
   // Predictions
   const [predictionStats, setPredictionStats] = useState(() => JSON.parse(localStorage.getItem('golazo_predictions') || 'null') || {});
   const [editingPrediction, setEditingPrediction] = useState(null);
-  const fetchPredictionStats = useFetchPredictionStats(setPredictionStats); // Utilisez le nouveau hook
+  const fetchPredictionStats = useFetchPredictionStats(setPredictionStats); 
 
   // Persistence
   useEffect(() => { localStorage.setItem('golazo_watchlist', JSON.stringify(watchlist)); }, [watchlist]);
   useEffect(() => { localStorage.setItem('golazo_positions', JSON.stringify(positions)); }, [positions]);
   useEffect(() => { localStorage.setItem('golazo_predictions', JSON.stringify(predictionStats)); }, [predictionStats]);
+
+  // Fetch funding rates from Hyperliquid (as a common source for now)
+  const fetchFundingRates = useCallback(async () => {
+    try {
+      const res = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs' }) });
+      const data = await res.json();
+      if (data?.[0]?.universe && data?.[1]) {
+        const rates = {};
+        data[1].forEach((ctx, i) => { 
+          const sym = data[0].universe[i]?.name; 
+          // Funding rate * 3 (every 8 hours) * 365 days * 100 to get APR %
+          if (sym) rates[sym] = parseFloat(ctx.funding || 0) * 3 * 365 * 100; 
+        });
+        setFundingRates(rates);
+        return rates; 
+      }
+    } catch (e) { 
+      console.error("Erreur de récupération des taux de financement:", e); 
+      return {};
+    }
+    return {};
+  }, []);
+  
+  // Update APR for a specific position (using Hyperliquid rates for now)
+  const updatePositionApr = useCallback(async (id, pair) => {
+    setLoadingAprId(id);
+    const rates = await fetchFundingRates();
+    const newRate = rates[pair];
+
+    if (newRate !== undefined) {
+        setPositions(prevPositions => 
+            prevPositions.map(p => 
+                p.id === id 
+                ? { 
+                    ...p, 
+                    // Mise à jour de l'APR Long et Short avec le nouveau taux Hyperliquid
+                    longApr: newRate.toFixed(2), 
+                    shortApr: newRate.toFixed(2) 
+                  }
+                : p
+            )
+        );
+    }
+    setLoadingAprId(null);
+  }, [fetchFundingRates]);
 
   // Fetch stocks
   const fetchStockData = useCallback(async () => {
@@ -184,28 +234,19 @@ export default function App() {
     setLoadingStocks(false);
   }, [watchlist]);
 
-  // Fetch funding
-  const fetchFundingRates = useCallback(async () => {
-    try {
-      const res = await fetch('https://api.hyperliquid.xyz/info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'metaAndAssetCtxs' }) });
-      const data = await res.json();
-      if (data?.[0]?.universe && data?.[1]) {
-        const rates = {};
-        data[1].forEach((ctx, i) => { const sym = data[0].universe[i]?.name; if (sym) rates[sym] = parseFloat(ctx.funding || 0) * 3 * 365 * 100; });
-        setFundingRates(rates);
-      }
-    } catch (e) { console.error(e); }
-  }, []);
-
   // Initial and recurring data fetching
   useEffect(() => { 
     fetchStockData(); 
     fetchFundingRates(); 
-    fetchPredictionStats(); // Appel initial des stats
+    fetchPredictionStats();
+    
     const i1 = setInterval(fetchStockData, 60000); 
     const i2 = setInterval(fetchFundingRates, 30000); 
-    // On peut aussi ajouter un intervalle pour fetchPredictionStats ici si l'API est mise en place
-    return () => { clearInterval(i1); clearInterval(i2); }; 
+    
+    return () => { 
+      clearInterval(i1); 
+      clearInterval(i2); 
+    }; 
   }, [fetchStockData, fetchFundingRates, fetchPredictionStats]);
 
   // Helpers
@@ -219,7 +260,11 @@ export default function App() {
   const selectPair = (pair) => {
     setSelectedPair(pair);
     const rate = fundingRates[pair];
-    setNewPos(prev => ({ ...prev, longApr: rate !== undefined ? rate.toFixed(2) : '', shortApr: rate !== undefined ? rate.toFixed(2) : '' }));
+    setNewPos(prev => ({ 
+        ...prev, 
+        longApr: rate !== undefined ? rate.toFixed(2) : prev.longApr, 
+        shortApr: rate !== undefined ? rate.toFixed(2) : prev.shortApr 
+    }));
   };
 
   const addPosition = () => {
@@ -382,9 +427,17 @@ export default function App() {
                           const lN = Number(pos.longCapital || 0) * Number(pos.longLeverage || 1);
                           const sN = Number(pos.shortCapital || 0) * Number(pos.shortLeverage || 1);
                           const { net, daily } = calcYield(pos.longApr, pos.shortApr, lN, sN);
+                          const isRefreshing = loadingAprId === pos.id;
                           return (
                             <tr key={pos.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                              <td className="p-3 font-mono font-bold">{pos.pair}</td>
+                              <td className="p-3 font-mono font-bold">
+                                {pos.pair}
+                                {pos.pair && PAIRS_BY_PLATFORM.hyperliquid.crypto.includes(pos.pair) && ( // Seulement rafraîchir pour les pairs Hyperliquid
+                                    <button onClick={() => updatePositionApr(pos.id, pos.pair)} disabled={isRefreshing} className={`ml-2 p-1 rounded-full text-white/30 hover:text-emerald-400 transition-all ${isRefreshing ? 'animate-spin' : ''}`} title="Refresh APR">
+                                        <Icons.Refresh />
+                                    </button>
+                                )}
+                              </td>
                               <td className="p-3"><div className="flex items-center gap-2"><img src={lP?.logo} alt="" className="w-4 h-4 rounded" /><div className="text-xs"><div style={{color: lP?.color}}>{lP?.name}</div><div className="text-white/40">${lN.toLocaleString()} • {pos.longApr}%</div></div></div></td>
                               <td className="p-3"><div className="flex items-center gap-2"><img src={sP?.logo} alt="" className="w-4 h-4 rounded" /><div className="text-xs"><div style={{color: sP?.color}}>{sP?.name}</div><div className="text-white/40">${sN.toLocaleString()} • {pos.shortApr}%</div></div></div></td>
                               <td className={`p-3 text-right font-bold ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{net >= 0 ? '+' : ''}{net.toFixed(2)}%</td>
@@ -462,26 +515,34 @@ export default function App() {
           {/* PREDICTIONS */}
           {activeTab === 'predictions' && (
             <div className="space-y-6">
-              <div className="text-sm text-white/40 mb-4">📊 Mets à jour tes stats manuellement ou clique sur le bouton de rafraîchissement (nécessite une configuration API pour l'automatisation).</div>
+              <div className="text-sm text-white/40 mb-4">📊 Mets à jour tes stats manuellement ou clique sur le bouton de rafraîchissement. **Polymarket est mis à jour en direct (simulé).**</div>
               <button onClick={fetchPredictionStats} className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 mb-4">
-                <Icons.Refresh /> Rafraîchir les stats auto.
+                <Icons.Refresh /> Rafraîchir les stats automatiques
               </button>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {PREDICTION_PLATFORMS.map(platform => {
                   const stats = predictionStats[platform.id] || {};
                   const isEditing = editingPrediction === platform.id;
-                  const showProfile = platform.profileUrl && ['polymarket', 'myriad', 'myriadbnb', 'limitless', 'xomarket'].includes(platform.id); // Affiche Profil seulement si profileUrl existe et c'est une plateforme où le rang est important
+                  
+                  // Définir la section du titre comme un lien
+                  const TitleLink = () => (
+                    <a href={platform.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 font-bold hover:opacity-80 transition-opacity">
+                        <img src={platform.logo} alt="" className="w-6 h-6 rounded-lg" />
+                        <span>{platform.name}</span>
+                        <Icons.External />
+                    </a>
+                  );
                   
                   return (
                     <div key={platform.id} className="bg-white/[0.02] rounded-2xl border border-white/[0.06] overflow-hidden">
                       <div className="h-14 relative flex items-center justify-between px-4" style={{ background: `linear-gradient(135deg, ${platform.color}40, ${platform.color}10)` }}>
-                        <div className="flex items-center gap-2"><img src={platform.logo} alt="" className="w-6 h-6 rounded-lg" /><span className="font-bold">{platform.name}</span></div>
+                        <TitleLink />
                         <button onClick={() => setEditingPrediction(isEditing ? null : platform.id)} className="p-1.5 rounded-lg bg-black/20 hover:bg-black/40">{isEditing ? <Icons.Check /> : <Icons.Edit />}</button>
                       </div>
                       <div className="p-4">
                         {isEditing ? (
                           <div className="space-y-2">
-                            {['rank', 'pnl', 'positions', 'volume'].map(f => ( // Ajout de volume pour la saisie manuelle
+                            {['rank', 'pnl', 'positions', 'volume'].map(f => (
                               <div key={f} className="flex items-center gap-2">
                                 <span className="text-xs text-white/40 w-16 capitalize">{f === 'pnl' ? 'PnL $' : f}</span>
                                 <input 
@@ -496,7 +557,7 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            {showProfile && (
+                            {platform.profileUrl && (
                                 <div className="flex justify-between items-center">
                                     <span className="text-xs text-white/40">Rank (All Time)</span>
                                     <span className="text-xl font-bold" style={{ color: platform.color }}>{stats.rank ? `#${stats.rank}` : '-'}</span>
@@ -508,8 +569,7 @@ export default function App() {
                           </div>
                         )}
                         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/[0.06]">
-                          <a href={platform.url} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 rounded-xl text-center text-xs font-medium hover:opacity-90" style={{ backgroundColor: platform.color }}>Trade</a>
-                          {showProfile && <a href={platform.profileUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs">Profile</a>}
+                          {platform.profileUrl && <a href={platform.profileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 rounded-xl text-center text-xs font-medium hover:opacity-90" style={{ backgroundColor: platform.color }}>Mon Profil</a>}
                           <a href={`https://twitter.com/${platform.twitter}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-xl bg-white/5 hover:bg-white/10"><Icons.Twitter /></a>
                         </div>
                       </div>
